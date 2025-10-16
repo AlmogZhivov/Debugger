@@ -1,0 +1,16 @@
+{
+  "name": "debugger",
+  "version": "1.0.0",
+  "description": "The project contains 5 Modules: - api-ext - introduces the projects interfaces - api-int - introduces the projects internal components - bpjs-debugger - the debugger engine - service - manipulates clients and their running sessions - run/debug sessions - controller - responsible for the incoming HTTP/WS requests and messages",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@stomp/stompjs": "^7.2.1",
+    "ws": "^8.18.3"
+  }
+}

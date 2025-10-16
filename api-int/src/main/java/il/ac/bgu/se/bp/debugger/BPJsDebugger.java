@@ -3,6 +3,7 @@ package il.ac.bgu.se.bp.debugger;
 import il.ac.bgu.se.bp.rest.response.DebugResponse;
 import il.ac.bgu.se.bp.rest.response.GetSyncSnapshotsResponse;
 import il.ac.bgu.se.bp.rest.response.SyncSnapshot;
+import il.ac.bgu.se.bp.socket.state.BPDebuggerState;
 import il.ac.bgu.se.bp.socket.state.EventInfo;
 import il.ac.bgu.se.bp.utils.observer.BPEvent;
 import il.ac.bgu.se.bp.utils.observer.Publisher;
@@ -41,4 +42,5 @@ public interface BPJsDebugger<T> extends Debugger<T>, Publisher<BPEvent> {
 
 
     SortedMap<Long, EventInfo> getEventsHistory(int from, int to);
+    BPDebuggerState getCurrentState();
 }

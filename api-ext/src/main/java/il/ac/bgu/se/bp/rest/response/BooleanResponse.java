@@ -62,7 +62,7 @@ public class BooleanResponse {
     public String toString() {
         return "BooleanResponse{" +
                 "isSuccess=" + isSuccess +
-                ", errorCode=" + errorCode + '\'' +
+                ", errorCode=" + errorCode +
                 ", context=" + (context != null ? context.toString() : "null") +
                 '}';
     }

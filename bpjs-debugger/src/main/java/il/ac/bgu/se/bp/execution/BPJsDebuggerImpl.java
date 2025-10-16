@@ -621,4 +621,9 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
     public String getDebuggerId() {
         return debuggerId;
     }
+
+    @Override
+    public BPDebuggerState getCurrentState() {
+        return debuggerEngine.getCurrentState();
+    }
 }

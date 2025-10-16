@@ -2,10 +2,10 @@ package il.ac.bgu.se.bp.debugger.engine;
 
 import il.ac.bgu.se.bp.debugger.DebuggerLevel;
 import il.ac.bgu.se.bp.debugger.commands.DebuggerCommand;
+import il.ac.bgu.se.bp.socket.state.BPDebuggerState;
 import il.ac.bgu.se.bp.utils.observer.BPEvent;
 import il.ac.bgu.se.bp.utils.observer.Publisher;
 import org.mozilla.javascript.tools.debugger.GuiCallback;
-
 import java.util.Map;
 
 public interface DebuggerEngine<S> extends GuiCallback, Publisher<BPEvent> {
@@ -30,4 +30,5 @@ public interface DebuggerEngine<S> extends GuiCallback, Publisher<BPEvent> {
 
     boolean isMuteBreakpoints();
     boolean isRunning();
+    BPDebuggerState getCurrentState();
 }

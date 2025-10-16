@@ -45,7 +45,6 @@ public class DebugResponse extends BooleanResponse {
     public String toString() {
         return super.toString() +
                 ", breakpoints" + Arrays.toString(breakpoints) +
-                ", context=" + (context != null ? context.toString() : "null") +
                 '}';
     }
 }

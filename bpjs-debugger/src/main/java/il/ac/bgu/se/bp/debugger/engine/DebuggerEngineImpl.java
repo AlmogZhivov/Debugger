@@ -230,4 +230,9 @@ public class DebuggerEngineImpl implements DebuggerEngine<BProgramSyncSnapshot> 
     public void notifySubscribers(BPEvent event) {
         publisher.notifySubscribers(event);
     }
+
+    @Override
+    public BPDebuggerState getCurrentState() {
+        return debuggerStateHelper.getLastState();
+    }
 }

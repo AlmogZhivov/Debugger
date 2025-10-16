@@ -1,12 +1,13 @@
 package il.ac.bgu.se.bp.rest.response;
 
 import il.ac.bgu.se.bp.error.ErrorCode;
-
+import il.ac.bgu.se.bp.socket.state.BPDebuggerState;
 import java.util.Arrays;
 
 public class DebugResponse extends BooleanResponse {
 
     private boolean[] breakpoints;
+    private BPDebuggerState context;
 
     public DebugResponse() {
     }
@@ -33,10 +34,18 @@ public class DebugResponse extends BooleanResponse {
         this.breakpoints = breakpoints;
     }
 
+    public BPDebuggerState getContext() { 
+        return context; 
+    }
+    public void setContext(BPDebuggerState context) { 
+        this.context = context; 
+    }
+
     @Override
     public String toString() {
         return super.toString() +
                 ", breakpoints" + Arrays.toString(breakpoints) +
+                ", context=" + (context != null ? context.toString() : "null") +
                 '}';
     }
 }

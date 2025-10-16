@@ -1,13 +1,14 @@
 package il.ac.bgu.se.bp.rest.response;
 
 import il.ac.bgu.se.bp.error.ErrorCode;
-
+import il.ac.bgu.se.bp.socket.state.BPDebuggerState;
 import java.util.Objects;
 
 public class BooleanResponse {
 
     private boolean isSuccess;
     private ErrorCode errorCode;
+    private BPDebuggerState context;
 
     public BooleanResponse() { }
 
@@ -49,11 +50,20 @@ public class BooleanResponse {
         return Objects.hash(isSuccess, errorCode);
     }
 
+    public BPDebuggerState getContext() { 
+        return context; 
+    }
+    
+    public void setContext(BPDebuggerState context) { 
+        this.context = context; 
+    }
+
     @Override
     public String toString() {
         return "BooleanResponse{" +
                 "isSuccess=" + isSuccess +
-                ", errorCode=" + errorCode +
+                ", errorCode=" + errorCode + '\'' +
+                ", context=" + (context != null ? context.toString() : "null") +
                 '}';
     }
 }

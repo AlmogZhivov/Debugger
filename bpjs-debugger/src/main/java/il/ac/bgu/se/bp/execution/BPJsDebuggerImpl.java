@@ -122,14 +122,18 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             syncSnapshot = awaitForExecutorServiceToFinishTask(bprog::setup);
             if (syncSnapshot == null) {
                 onExit();
-                return new DebugResponse(false, ErrorCode.BP_SETUP_FAIL, new boolean[0]);
+                DebugResponse dr = new DebugResponse(false, ErrorCode.BP_SETUP_FAIL, new boolean[0]);
+                dr.setContext(debuggerEngine.getCurrentState());
+                return dr;
             }
             syncSnapshot.getBThreadSnapshots().forEach(sn -> listeners.forEach(l -> l.bthreadAdded(bprog, sn)));
             isBProgSetup = true;
             SafetyViolationTag violationTag = syncSnapshot.getViolationTag();
             if (violationTag != null && !StringUtils.isEmpty(violationTag.getMessage())) {
                 onExit();
-                return new DebugResponse(false, ErrorCode.BP_SETUP_FAIL, new boolean[0]);
+                DebugResponse dr = new DebugResponse(false, ErrorCode.BP_SETUP_FAIL, new boolean[0]);
+                dr.setContext(debuggerEngine.getCurrentState());
+                return dr;
             }
         }
         toggleMuteSyncPoints(isSkipSyncPoints);
@@ -143,14 +147,18 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         numOfLines = actualBreakpoints.length;
 
         bprog.setWaitForExternalEvents(isWaitForExternalEvents);
-        return new DebugResponse(true, actualBreakpoints);
+        DebugResponse dr = new DebugResponse(true, actualBreakpoints);
+        dr.setContext(debuggerEngine.getCurrentState());
+        return dr;
     }
 
     @Override
     public synchronized BooleanResponse toggleMuteSyncPoints(boolean toggleMuteSyncPoints) {
         logger.info("toggleMuteSyncPoints to: {0}", toggleMuteSyncPoints);
         this.isSkipSyncPoints = toggleMuteSyncPoints;
-        return createSuccessResponse();
+        BooleanResponse r = createSuccessResponse();
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
@@ -184,14 +192,17 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         if (newSnapshot == null) {
             return createErrorResponse(ErrorCode.CANNOT_REPLACE_SNAPSHOT);
         }
-
-        return setSyncSnapshot(newSnapshot);
+        BooleanResponse r = setSyncSnapshot(newSnapshot);
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
     public BooleanResponse setSyncSnapshot(SyncSnapshot syncSnapshotHolder) {
         try {
-            return setSyncSnapshot(new BProgramSyncSnapshotIO(bprog).deserialize(syncSnapshotHolder.getSyncSnapshot()));
+            BooleanResponse r = setSyncSnapshot(new BProgramSyncSnapshotIO(bprog).deserialize(syncSnapshotHolder.getSyncSnapshot()));
+            r.setContext(debuggerEngine.getCurrentState());
+            return r;
         } catch (Exception e) {
             logger.error("deserialization from sync snapshot bytes to object failed", e);
             return createErrorResponse(ErrorCode.IMPORT_SYNC_SNAPSHOT_FAILURE);
@@ -203,7 +214,9 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         debuggerStateHelper.cleanFields();
         debuggerEngine.setSyncSnapshot(syncSnapshot);
         debuggerEngine.onStateChanged();
-        return createSuccessResponse();
+        BooleanResponse r = createSuccessResponse();
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
@@ -249,6 +262,7 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         if (debugResponse.isSuccess()) {
             bpExecutorService.execute(this::runStartSync);
         }
+        debugResponse.setContext(debuggerEngine.getCurrentState());
         return debugResponse;
     }
 
@@ -309,7 +323,9 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
 
 //        asyncOperationRunner.runAsyncCallback(this::runNextSync);
         bpExecutorService.execute(this::runNextSync);
-        return createSuccessResponse();
+        BooleanResponse r = createSuccessResponse();
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     private void runNextSync() {
@@ -463,32 +479,42 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
 
     @Override
     public BooleanResponse continueRun() {
-        return bPjsProgramValidator.validateAndRunAsync(this, RunnerState.State.JS_DEBUG,
+        BooleanResponse r = bPjsProgramValidator.validateAndRunAsync(this, RunnerState.State.JS_DEBUG,
                 createAddCommandCallback(new Continue()));
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
     public BooleanResponse stepInto() {
-        return bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
+        BooleanResponse r = bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
                 createAddCommandCallback(new StepInto()));
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
     public BooleanResponse stepOver() {
-        return bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
+        BooleanResponse r = bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
                 createAddCommandCallback(new StepOver()));
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
     public BooleanResponse stepOut() {
-        return bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
+        BooleanResponse r = bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
                 createAddCommandCallback(new StepOut()));
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
     public BooleanResponse setBreakpoint(final int lineNumber, final boolean stopOnBreakpoint) {
         Callable<BooleanResponse> applyCommandCallback = createApplyCommandCallback(new SetBreakpoint(lineNumber, stopOnBreakpoint), debuggerEngine);
-        return bPjsProgramValidator.validateAndRun(this, applyCommandCallback);
+        BooleanResponse r = bPjsProgramValidator.validateAndRun(this, applyCommandCallback);
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
@@ -499,19 +525,25 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         setIsStarted(false);
         onExit();
         notifySubscribers(new ProgramStatusEvent(debuggerId, Status.STOP));
-        return createSuccessResponse();
+        BooleanResponse r = createSuccessResponse();
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
     public BooleanResponse getState() {
         Callable<BooleanResponse> applyCommandCallback = createApplyCommandCallback(new GetState(), debuggerEngine);
-        return bPjsProgramValidator.validateAndRun(this, applyCommandCallback);
+        BooleanResponse r = bPjsProgramValidator.validateAndRun(this, applyCommandCallback);
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
     public BooleanResponse toggleMuteBreakpoints(boolean toggleBreakPointStatus) {
         Callable<BooleanResponse> applyCommandCallback = createApplyCommandCallback(new ToggleMuteBreakpoints(toggleBreakPointStatus), debuggerEngine);
-        return bPjsProgramValidator.validateAndRun(this, applyCommandCallback);
+        BooleanResponse r = bPjsProgramValidator.validateAndRun(this, applyCommandCallback);
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
@@ -538,8 +570,9 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             debuggerEngine.setSyncSnapshot(syncSnapshot);
             debuggerEngine.onStateChanged();
         }
-
-        return createSuccessResponse();
+        BooleanResponse r = createSuccessResponse();
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
@@ -552,13 +585,17 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         syncSnapshot = syncSnapshot.copyWith(updatedExternals);
         debuggerEngine.setSyncSnapshot(syncSnapshot);
         debuggerEngine.onStateChanged();
-        return createSuccessResponse();
+        BooleanResponse r = createSuccessResponse();
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     @Override
     public BooleanResponse toggleWaitForExternalEvents(boolean shouldWait) {
         bprog.setWaitForExternalEvents(shouldWait);
-        return createSuccessResponse();
+        BooleanResponse r = createSuccessResponse();
+        r.setContext(debuggerEngine.getCurrentState());
+        return r;
     }
 
     private Callable<BooleanResponse> createAddCommandCallback(DebuggerCommand debuggerCommand) {

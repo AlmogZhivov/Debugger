@@ -88,13 +88,22 @@ Safe-Get "$BaseUrl/bpjs/stop" | Out-Null
 $src3 = @'
 bp.registerBThread("main", function () {
   var c = 0;
+  var d = 10;
+  var e = 100;
   c = c + 1;
+  d = d * 2;
+  e = e - 50;
   bp.sync({ request: bp.Event("Go") });
   c = c + 2;
+  d = d + 5;
+  e = e * 2;
   bp.sync({ request: bp.Event("Done") });
+  c = c + 3;
+  d = d - 10;
+  e = e / 2;
 });
 '@
-Invoke-PostJson "$BaseUrl/bpjs/debug" @{ sourceCode = $src3; breakpoints = @(1,2,3,4,5); skipBreakpointsToggle = $false; skipSyncStateToggle = $false; waitForExternalEvents = $false } | Out-Null
+Invoke-PostJson "$BaseUrl/bpjs/debug" @{ sourceCode = $src3; breakpoints = @(4,5,6,9,10,11); skipBreakpointsToggle = $false; skipSyncStateToggle = $false; waitForExternalEvents = $false } | Out-Null
 Start-Sleep -Milliseconds 100
 $c1 = Retry-Get "$BaseUrl/bpjs/continue"; if ($c1) { $c1.context | ConvertTo-Json -Depth 10 }
 Start-Sleep -Milliseconds 75

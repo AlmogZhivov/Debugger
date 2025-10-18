@@ -14,6 +14,7 @@ public class BPDebuggerState implements Serializable {
     private DebuggerConfigs debuggerConfigs;
     private Boolean[] breakpoints;
     private Map<String, String> globalEnv;
+    private COBPContext cobpContext;
 
 
     public BPDebuggerState() {
@@ -56,6 +57,16 @@ public class BPDebuggerState implements Serializable {
 
     public void setGlobalEnv(Map<String, String> globalEnv) {
         this.globalEnv = globalEnv;
+    }
+
+    public COBPContext getCobpContext() {
+        System.out.println("DEBUG: getCobpContext called, returning: " + (cobpContext != null ? cobpContext.toString() : "null"));
+        return cobpContext;
+    }
+
+    public void setCobpContext(COBPContext cobpContext) {
+        this.cobpContext = cobpContext;
+        System.out.println("DEBUG: setCobpContext called with: " + (cobpContext != null ? cobpContext.toString() : "null"));
     }
 
     public String getCurrentRunningBT() {

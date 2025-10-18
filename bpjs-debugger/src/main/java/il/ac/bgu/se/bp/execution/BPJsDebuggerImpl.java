@@ -32,6 +32,8 @@ import il.ac.bgu.se.bp.utils.DebuggerBProgramRunnerListener;
 import il.ac.bgu.se.bp.utils.DebuggerExecutorServiceMaker;
 import il.ac.bgu.se.bp.utils.DebuggerPrintStream;
 import il.ac.bgu.se.bp.utils.DebuggerStateHelper;
+import il.ac.bgu.se.bp.utils.COBPDetector;
+import il.ac.bgu.se.bp.utils.COBPRuntimeSupport;
 import il.ac.bgu.se.bp.utils.logger.Logger;
 import il.ac.bgu.se.bp.utils.observer.BPEvent;
 import il.ac.bgu.se.bp.utils.observer.Subscriber;
@@ -76,6 +78,7 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
     private final SyncSnapshotHolder<BProgramSyncSnapshot, BEvent> syncSnapshotHolder = new SyncSnapshotHolderImpl();
     private final DebuggerStateHelper debuggerStateHelper;
     private final DebuggerPrintStream debuggerPrintStream = new DebuggerPrintStream();
+    private COBPRuntimeSupport cobpRuntimeSupport;
     private final List<BProgramRunnerListener> listeners = new ArrayList<>();
     private final List<Subscriber<BPEvent>> subscribers = new ArrayList<>();
 
@@ -103,14 +106,144 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         debuggerEngine = new DebuggerEngineImpl(debuggerId, filename, state, debuggerStateHelper, debuggerExecutorId);
         debuggerEngine.changeDebuggerLevel(debuggerLevel);
         debuggerPrintStream.setDebuggerId(debuggerId);
-        bprog = new ResourceBProgram(filename);
+        
+        // Check if this is COBP code and create appropriate BProgram
+        String sourceCode = readSourceCodeFromFile();
+        logger.info("Source code read, length: {0}", sourceCode != null ? sourceCode.length() : 0);
+        
+        if (sourceCode != null && COBPDetector.isCOBPCode(sourceCode)) {
+            logger.info("COBP code detected, creating COBP-aware BProgram for file: {0}", filename);
+            logger.info("COBP features detected: {0}", COBPDetector.getCOBPFeatures(sourceCode));
+            
+            // Create a modified source code with COBP context injected
+            String modifiedSourceCode = createCOBPSourceCode(sourceCode);
+            
+            // Create a custom BProgram that uses the modified source code
+            bprog = new COBPAwareBProgram(filename, modifiedSourceCode, null);
+            cobpRuntimeSupport = new COBPRuntimeSupport(bprog);
+            // Update the COBPAwareBProgram with the runtime support
+            ((COBPAwareBProgram) bprog).setCOBPRuntimeSupport(cobpRuntimeSupport);
+        } else {
+            logger.info("Regular BPjs code detected, creating standard ResourceBProgram for file: {0}", filename);
+            bprog = new ResourceBProgram(filename);
+        }
+        
         initListeners(bprog);
     }
+    
+    
+    /**
+     * Reads the source code from the file
+     * @return the source code content or null if failed
+     */
+    private String readSourceCodeFromFile() {
+        try {
+            // Use the same approach as SourceCodeHelperImpl to get the base path
+            ClassLoader classLoader = getClass().getClassLoader();
+            String basePath = classLoader.getResource(".").getFile();
+            String fullPath = basePath + filename;
+            
+            logger.info("Attempting to read source code from: {0}", fullPath);
+            
+            java.io.File file = new java.io.File(fullPath);
+            if (file.exists()) {
+                logger.info("Source code file found, reading content...");
+                java.util.Scanner scanner = new java.util.Scanner(file).useDelimiter("\\A");
+                String sourceCode = scanner.hasNext() ? scanner.next() : "";
+                scanner.close();
+                logger.info("Successfully read source code, length: {0}", sourceCode.length());
+                return sourceCode;
+            } else {
+                logger.warning("Source code file not found: {0}", fullPath);
+                // Try to read as classpath resource as fallback
+                try {
+                    java.io.InputStream inputStream = classLoader.getResourceAsStream(filename);
+                    if (inputStream != null) {
+                        logger.info("Found source code file as classpath resource: {0}", filename);
+                        java.util.Scanner scanner = new java.util.Scanner(inputStream).useDelimiter("\\A");
+                        String sourceCode = scanner.hasNext() ? scanner.next() : "";
+                        scanner.close();
+                        inputStream.close();
+                        logger.info("Successfully read source code from classpath, length: {0}", sourceCode.length());
+                        return sourceCode;
+                    }
+                } catch (Exception e) {
+                    logger.warning("Failed to read as classpath resource: {0}", e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Failed to read source code from file {0}: {1}", filename, e.getMessage());
+        }
+        return null;
+    }
+
+    
 
     private void initListeners(BProgram bProgram) {
         listeners.add(new PrintBProgramRunnerListener(debuggerPrintStream));
         listeners.add(new DebuggerBProgramRunnerListener(debuggerStateHelper));
         bProgram.setAddBThreadCallback((bp, bt) -> listeners.forEach(l -> l.bthreadAdded(bp, bt)));
+    }
+    
+    /**
+     * Get the source code for COBP context extraction
+     */
+    public String getSourceCode() {
+        return readSourceCodeFromFile();
+    }
+    
+    /**
+     * Get the COBP runtime support for context extraction
+     */
+    public COBPRuntimeSupport getCOBPRuntimeSupport() {
+        return cobpRuntimeSupport;
+    }
+    
+    /**
+     * Creates modified source code with COBP context injected
+     */
+    private String createCOBPSourceCode(String originalSourceCode) {
+        try {
+            // Create COBP context code
+            String cobpContextCode = 
+                "// COBP Runtime Support - Injected automatically\n" +
+                "var ctx = {\n" +
+                "  bthread: function(name, context, func) {\n" +
+                "    // Store context mapping for later extraction\n" +
+                "    if (typeof ctx._contexts === 'undefined') {\n" +
+                "      ctx._contexts = {};\n" +
+                "    }\n" +
+                "    ctx._contexts[name] = context;\n" +
+                "    // Delegate to bp.registerBThread\n" +
+                "    return bp.registerBThread(name, func);\n" +
+                "  },\n" +
+                "  Event: function(name, data) {\n" +
+                "    return bp.Event(name, data);\n" +
+                "  },\n" +
+                "  sync: function(options) {\n" +
+                "    return bp.sync(options);\n" +
+                "  },\n" +
+                "  Entity: function() { return {}; },\n" +
+                "  populateContext: function() { return {}; },\n" +
+                "  registerQuery: function() { return {}; },\n" +
+                "  registerEffect: function() { return {}; },\n" +
+                "  runQuery: function() { return {}; },\n" +
+                "  getEntityById: function() { return {}; },\n" +
+                "  removeEntity: function() { return {}; },\n" +
+                "  insertEntity: function() { return {}; }\n" +
+                "};\n" +
+                "// End COBP Runtime Support\n\n";
+            
+            // Combine the COBP context code with the original source
+            String modifiedSourceCode = cobpContextCode + originalSourceCode;
+            
+            logger.info("Created COBP source code, total length: {0}", modifiedSourceCode.length());
+            return modifiedSourceCode;
+            
+        } catch (Exception e) {
+            logger.error("Failed to create COBP source code: {0}", e, e.getMessage());
+            return originalSourceCode; // Fall back to original source
+        }
     }
 
     @Override
@@ -119,9 +252,14 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         if (!isBProgSetup) { // may get twice to setup - must do bprog setup first time only
             listeners.forEach(l -> l.starting(bprog));
             bprog.setLoggerOutputStreamer(debuggerPrintStream);
+            
+            // Setup the BProgram (works for both regular BPjs and COBP code)
             syncSnapshot = awaitForExecutorServiceToFinishTask(bprog::setup);
+            
             if (syncSnapshot == null) {
                 onExit();
+                // Generate a basic state with COBP context even when setup fails
+                debuggerStateHelper.generateDebuggerState(null, null, null, null);
                 DebugResponse dr = new DebugResponse(false, ErrorCode.BP_SETUP_FAIL, new boolean[0]);
                 dr.setContext(debuggerEngine.getCurrentState());
                 return dr;
@@ -131,6 +269,8 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             SafetyViolationTag violationTag = syncSnapshot.getViolationTag();
             if (violationTag != null && !StringUtils.isEmpty(violationTag.getMessage())) {
                 onExit();
+                // Generate a basic state with COBP context even when setup fails
+                debuggerStateHelper.generateDebuggerState(null, null, null, null);
                 DebugResponse dr = new DebugResponse(false, ErrorCode.BP_SETUP_FAIL, new boolean[0]);
                 dr.setContext(debuggerEngine.getCurrentState());
                 return dr;
@@ -147,6 +287,10 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         numOfLines = actualBreakpoints.length;
 
         bprog.setWaitForExternalEvents(isWaitForExternalEvents);
+        
+        // Generate initial state to ensure COBP context is available
+        debuggerEngine.onStateChanged();
+        
         DebugResponse dr = new DebugResponse(true, actualBreakpoints);
         dr.setContext(debuggerEngine.getCurrentState());
         return dr;

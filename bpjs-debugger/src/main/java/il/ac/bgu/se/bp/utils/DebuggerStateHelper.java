@@ -38,10 +38,10 @@ public class DebuggerStateHelper {
     private String currentEvent = null;
     private static final int INITIAL_INDEX_FOR_EVENTS_HISTORY_ON_SYNC_STATE = 0;
     private static final int FINAL_INDEX_FOR_EVENTS_HISTORY_ON_SYNC_STATE = 10;
-    private BPJsDebugger bpJsDebugger;
+    private BPJsDebugger<?> bpJsDebugger;
     private DebuggerLevel debuggerLevel;
 
-    public DebuggerStateHelper(BPJsDebugger bpJsDebugger, SyncSnapshotHolder<BProgramSyncSnapshot, BEvent> syncSnapshotHolder, DebuggerLevel debuggerLevel) {
+    public DebuggerStateHelper(BPJsDebugger<?> bpJsDebugger, SyncSnapshotHolder<BProgramSyncSnapshot, BEvent> syncSnapshotHolder, DebuggerLevel debuggerLevel) {
         this.bpJsDebugger = bpJsDebugger;
         this.syncSnapshotHolder = syncSnapshotHolder;
         this.debuggerLevel = debuggerLevel;
@@ -77,14 +77,75 @@ public class DebuggerStateHelper {
         DebuggerConfigs debuggerConfigs = generateDebuggerConfigs(bpJsDebugger);
 
         Map<String, String> globalEnv = getGlobalEnv(syncSnapshot);
+        
+        // Extract COBP context from source code (always try, regardless of execution state)
+        COBPContext cobpContext = null;
+        try {
+            // Try to get source code from the debugger for COBP context extraction
+            String sourceCode = null;
+            if (bpJsDebugger instanceof il.ac.bgu.se.bp.execution.BPJsDebuggerImpl) {
+                sourceCode = ((il.ac.bgu.se.bp.execution.BPJsDebuggerImpl) bpJsDebugger).getSourceCode();
+                logger.info("Source code retrieved from debugger: {0}", sourceCode != null ? "SUCCESS" : "NULL");
+            } else {
+                logger.info("Debugger is not BPJsDebuggerImpl instance: {0}", bpJsDebugger.getClass().getName());
+            }
+            
+            if (sourceCode != null) {
+                boolean isCOBP = il.ac.bgu.se.bp.utils.COBPDetector.isCOBPCode(sourceCode);
+                logger.info("COBP detection result: {0}", isCOBP ? "COBP_CODE" : "REGULAR_BPJS");
+                
+                if (isCOBP) {
+                    // First try to extract context from source code (always available)
+                    cobpContext = COBPContextHelper.extractCOBPContextFromSource(sourceCode, currentRunningBT);
+                    if (cobpContext != null) {
+                        logger.info("COBP context extracted from source code for b-thread: {0}", currentRunningBT);
+                    }
+                    
+                    // Then try to get additional context from runtime support (if available)
+                    if (bpJsDebugger instanceof il.ac.bgu.se.bp.execution.BPJsDebuggerImpl) {
+                        il.ac.bgu.se.bp.execution.BPJsDebuggerImpl debuggerImpl = (il.ac.bgu.se.bp.execution.BPJsDebuggerImpl) bpJsDebugger;
+                        il.ac.bgu.se.bp.utils.COBPRuntimeSupport runtimeSupport = debuggerImpl.getCOBPRuntimeSupport();
+                        
+                        if (runtimeSupport != null) {
+                            // Extract contexts from the current JavaScript runtime
+                            runtimeSupport.extractContextsFromCurrentRuntime();
+                            COBPContext runtimeContext = COBPContextHelper.extractCOBPContextFromRuntime(runtimeSupport, currentRunningBT);
+                            if (runtimeContext != null && runtimeContext.getCurrentBThreadContext() != null) {
+                                logger.info("COBP context also extracted from runtime for b-thread: {0}", currentRunningBT);
+                                // Use runtime context if it has more information
+                                cobpContext = runtimeContext;
+                            }
+                        }
+                    }
+                    
+                    if (cobpContext == null) {
+                        logger.warning("COBP context extraction returned null for b-thread: {0}", currentRunningBT);
+                    }
+                } else {
+                    logger.info("Not COBP code, skipping context extraction");
+                }
+            } else {
+                logger.warning("Source code is null, cannot extract COBP context");
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to extract COBP context from source code: {0}", e.getMessage());
+            cobpContext = null;
+        }
+        
         if (debuggerLevel.getLevel() > DebuggerLevel.LIGHT.getLevel()) {
             List<BThreadInfo> bThreadInfoList = generateBThreadInfos(syncSnapshot, state, lastContextData);
             EventsStatus eventsStatus = generateEventsStatus(syncSnapshot, state);
             Integer lineNumber = lastContextData == null ? null : lastContextData.frameCount() > 0 ? lastContextData.getFrame(0).getLineNumber() : null;
             boolean[] breakpoints = getBreakpoints(sourceInfo);
-            return new BPDebuggerState(bThreadInfoList, eventsStatus, eventsHistory, currentRunningBT, lineNumber, debuggerConfigs, ArrayUtils.toObject(breakpoints), globalEnv);
+            BPDebuggerState debuggerState = new BPDebuggerState(bThreadInfoList, eventsStatus, eventsHistory, currentRunningBT, lineNumber, debuggerConfigs, ArrayUtils.toObject(breakpoints), globalEnv);
+            logger.info("Setting COBP context in debugger state: {0}", cobpContext != null ? "SUCCESS" : "NULL");
+            debuggerState.setCobpContext(cobpContext);
+            return debuggerState;
         }
-        return new BPDebuggerState(new LinkedList<>(), new EventsStatus(), eventsHistory, currentRunningBT, null, debuggerConfigs, new Boolean[0], globalEnv);
+        BPDebuggerState debuggerState = new BPDebuggerState(new LinkedList<>(), new EventsStatus(), eventsHistory, currentRunningBT, null, debuggerConfigs, new Boolean[0], globalEnv);
+        logger.info("Setting COBP context in debugger state (light mode): {0}", cobpContext != null ? "SUCCESS" : "NULL");
+        debuggerState.setCobpContext(cobpContext);
+        return debuggerState;
     }
 
     private Map<String, String> getGlobalEnv(BProgramSyncSnapshot syncSnapshot) {
@@ -99,7 +160,7 @@ public class DebuggerStateHelper {
         return globalEnv;
     }
 
-    private DebuggerConfigs generateDebuggerConfigs(BPJsDebugger bpJsDebugger) {
+    private DebuggerConfigs generateDebuggerConfigs(BPJsDebugger<?> bpJsDebugger) {
         return bpJsDebugger == null ? null :
                 new DebuggerConfigs(bpJsDebugger.isMuteBreakPoints(), bpJsDebugger.isWaitForExternalEvents(), bpJsDebugger.isSkipSyncPoints());
     }
@@ -216,7 +277,7 @@ public class DebuggerStateHelper {
     private BThreadInfo createBThreadInfo(BThreadSyncSnapshot bThreadSS, RunnerState state, Dim.ContextData lastContextData, BProgramSyncSnapshot syncSnapshot) {
         try {
             Object implementation = getValue(bThreadSS.getScope(), "implementation");
-            Map<Integer, BThreadScope> env = state == null ? null :
+            Map<Integer, BThreadScope> env = state == null ? new HashMap<>() :
                     (state.getDebuggerState() == RunnerState.State.JS_DEBUG && Context.getCurrentContext() != null) ? getEnvDebug(implementation, lastContextData, bThreadSS.getName()) :
                             getEnv(implementation);
 
@@ -225,25 +286,26 @@ public class DebuggerStateHelper {
 
             EventSet waitFor = bThreadSS.getSyncStatement().getWaitFor();
             EventSet blocked = bThreadSS.getSyncStatement().getBlock();
-            if (!RunnerState.State.JS_DEBUG.equals(state.getDebuggerState())) {
+            if (state != null && !RunnerState.State.JS_DEBUG.equals(state.getDebuggerState())) {
                 Context.enter();
             }
             Set<BEvent> waitBEvents = allRequestedBEvents.stream().filter(req -> waitFor.contains(req)).collect(Collectors.toSet());
             Set<BEvent> blockedBEvents = allRequestedBEvents.stream().filter(req -> blocked.contains(req)).collect(Collectors.toSet());
-            if (!RunnerState.State.JS_DEBUG.equals(state.getDebuggerState())) {
+            if (state != null && !RunnerState.State.JS_DEBUG.equals(state.getDebuggerState())) {
                 Context.exit();
             }
             Set<EventInfo> waitEvents = waitBEvents.stream().map((e) -> e.equals(none) ? null : new EventInfo(getEventName(e))).filter(Objects::nonNull).collect(Collectors.toSet());
             Set<EventInfo> blockedEvents = blockedBEvents.stream().map((e) -> e.equals(none) ? null : new EventInfo(getEventName(e))).filter(Objects::nonNull).collect(Collectors.toSet());
             Set<EventInfo> requested = new ArrayList<>(bThreadSS.getSyncStatement().getRequest()).stream().map((r) -> new EventInfo(r.getName())).collect(Collectors.toSet());
 
-            return new BThreadInfo(bThreadSS.getName(), env, waitEvents, blockedEvents, requested);
+            return new BThreadInfo(bThreadSS.getName(), env != null ? env : new HashMap<>(), waitEvents, blockedEvents, requested);
         } catch (Exception e) {
             logger.error("failed to create BThread info, e: {0}", e, e.getMessage());
         }
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     private <T> T getValue(Object instance, String fieldName) throws NoSuchFieldException, IllegalAccessException {
         Field fld = instance.getClass().getDeclaredField(fieldName);
         fld.setAccessible(true);
@@ -380,6 +442,7 @@ public class DebuggerStateHelper {
     }
 
     public BPDebuggerState getLastState() {
+        System.out.println("DEBUG: getLastState called, returning: " + (lastState != null ? "BPDebuggerState with cobpContext=" + (lastState.getCobpContext() != null ? lastState.getCobpContext().toString() : "null") : "null"));
         return lastState;
     }
 
@@ -435,7 +498,7 @@ public class DebuggerStateHelper {
     public String getDebuggerId(){
         return this.bpJsDebugger.getDebuggerId();
     }
-    public void notifyDebuggerSubscribers(BPEvent event){
+    public void notifyDebuggerSubscribers(BPEvent<?> event){
         this.bpJsDebugger.notifySubscribers(event);
     }
 

@@ -1,3 +1,4 @@
+C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\state\COBPEntity.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\SetSyncSnapshotRequest.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\ToggleSyncStatesRequest.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\state\EventInfo.java
@@ -14,6 +15,7 @@ C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\r
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\state\EventsStatus.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\controller\BPjsIDERestController.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\SyncSnapshot.java
+C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\state\COBPContext.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\SetBreakpointRequest.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\ToggleWaitForExternalRequest.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\RunRequest.java

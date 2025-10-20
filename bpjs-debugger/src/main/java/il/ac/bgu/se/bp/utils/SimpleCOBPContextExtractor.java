@@ -1,7 +1,6 @@
 package il.ac.bgu.se.bp.utils;
 
 import il.ac.bgu.se.bp.socket.state.COBPContext;
-import il.ac.bgu.se.bp.socket.state.COBPEntity;
 import il.ac.bgu.se.bp.utils.logger.Logger;
 
 import java.util.*;
@@ -25,6 +24,24 @@ public class SimpleCOBPContextExtractor {
         "bthread\\s*\\(\\s*['\"]([^'\"]+)['\"]\\s*,\\s*function"
     );
     
+    /**
+     * Get all b-thread context mappings from source code
+     * @param sourceCode the COBP source code
+     * @return Map of b-thread name to context
+     */
+    public static Map<String, String> getAllBThreadContexts(String sourceCode) {
+        try {
+            if (!isCOBPCode(sourceCode)) {
+                return new HashMap<>();
+            }
+            
+            return extractBThreadContexts(sourceCode);
+        } catch (Exception e) {
+            logger.error("Failed to extract all b-thread contexts: {0}", e, e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
     /**
      * Extract COBP context information from source code
      * @param sourceCode the COBP source code
@@ -65,7 +82,8 @@ public class SimpleCOBPContextExtractor {
                 new ArrayList<>(), // No entities for now
                 new HashMap<>(),   // No query results for now
                 currentContext,    // Current b-thread context
-                null              // No b-thread bound context for now
+                null,             // No b-thread bound context for now
+                bThreadContexts   // All b-thread contexts
             );
             
         } catch (Exception e) {

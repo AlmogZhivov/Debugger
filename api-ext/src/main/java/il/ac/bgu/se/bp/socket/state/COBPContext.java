@@ -11,12 +11,22 @@ public class COBPContext implements Serializable {
     private Map<String, List<COBPEntity>> queryResults;
     private String currentBThreadContext; // e.g., "Piece.All"
     private Map<String, COBPEntity> bThreadBoundContext; // e.g., "piece": {COBPEntity}
+    private Map<String, String> allBThreadContexts; // e.g., "bthreadName": "context"
 
     public COBPContext(List<COBPEntity> entities, Map<String, List<COBPEntity>> queryResults, String currentBThreadContext, Map<String, COBPEntity> bThreadBoundContext) {
         this.entities = entities;
         this.queryResults = queryResults;
         this.currentBThreadContext = currentBThreadContext;
         this.bThreadBoundContext = bThreadBoundContext;
+        this.allBThreadContexts = new java.util.HashMap<>();
+    }
+
+    public COBPContext(List<COBPEntity> entities, Map<String, List<COBPEntity>> queryResults, String currentBThreadContext, Map<String, COBPEntity> bThreadBoundContext, Map<String, String> allBThreadContexts) {
+        this.entities = entities;
+        this.queryResults = queryResults;
+        this.currentBThreadContext = currentBThreadContext;
+        this.bThreadBoundContext = bThreadBoundContext;
+        this.allBThreadContexts = allBThreadContexts != null ? allBThreadContexts : new java.util.HashMap<>();
     }
 
     public List<COBPEntity> getEntities() {
@@ -51,6 +61,14 @@ public class COBPContext implements Serializable {
         this.bThreadBoundContext = bThreadBoundContext;
     }
 
+    public Map<String, String> getAllBThreadContexts() {
+        return allBThreadContexts;
+    }
+
+    public void setAllBThreadContexts(Map<String, String> allBThreadContexts) {
+        this.allBThreadContexts = allBThreadContexts;
+    }
+
     @Override
     public String toString() {
         return "COBPContext{" +
@@ -58,6 +76,7 @@ public class COBPContext implements Serializable {
                 ", queryResults=" + queryResults +
                 ", currentBThreadContext='" + currentBThreadContext + '\'' +
                 ", bThreadBoundContext=" + bThreadBoundContext +
+                ", allBThreadContexts=" + allBThreadContexts +
                 '}';
     }
 }

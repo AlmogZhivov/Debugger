@@ -26,8 +26,14 @@ public class COBPRuntimeSupport {
      */
     public void injectCOBPContext(Context jsContext, Scriptable scope) {
         try {
-            // Create JavaScript code that defines the ctx object
+            // Create JavaScript code that defines the ctx object and global functions
             String cobpCode = 
+                "// Global functions for COBP (delegating to bp object)\n" +
+                "var sync = function(options) { return bp.sync(options); };\n" +
+                "var Event = function(name, data) { return bp.Event(name, data); };\n" +
+                "var bthread = function(name, func) { return bp.registerBThread(name, func); };\n" +
+                "\n" +
+                "// COBP context object\n" +
                 "var ctx = {\n" +
                 "  bthread: function(name, context, func) {\n" +
                 "    // Store context mapping for later extraction\n" +
@@ -37,12 +43,6 @@ public class COBPRuntimeSupport {
                 "    ctx._contexts[name] = context;\n" +
                 "    // Delegate to bp.registerBThread\n" +
                 "    return bp.registerBThread(name, func);\n" +
-                "  },\n" +
-                "  Event: function(name, data) {\n" +
-                "    return bp.Event(name, data);\n" +
-                "  },\n" +
-                "  sync: function(options) {\n" +
-                "    return bp.sync(options);\n" +
                 "  },\n" +
                 "  Entity: function() {\n" +
                 "    // Placeholder for COBP Entity\n" +

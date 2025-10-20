@@ -121,8 +121,6 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             // Create a custom BProgram that uses the modified source code
             bprog = new COBPAwareBProgram(filename, modifiedSourceCode, null);
             cobpRuntimeSupport = new COBPRuntimeSupport(bprog);
-            // Update the COBPAwareBProgram with the runtime support
-            ((COBPAwareBProgram) bprog).setCOBPRuntimeSupport(cobpRuntimeSupport);
         } else {
             logger.info("Regular BPjs code detected, creating standard ResourceBProgram for file: {0}", filename);
             bprog = new ResourceBProgram(filename);
@@ -204,9 +202,15 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
      */
     private String createCOBPSourceCode(String originalSourceCode) {
         try {
-            // Create COBP context code
+            // Create COBP context code with global functions
             String cobpContextCode = 
                 "// COBP Runtime Support - Injected automatically\n" +
+                "// Global functions for COBP (delegating to bp object)\n" +
+                "var sync = function(options) { return bp.sync(options); };\n" +
+                "var Event = function(name, data) { return bp.Event(name, data); };\n" +
+                "var bthread = function(name, func) { return bp.registerBThread(name, func); };\n" +
+                "\n" +
+                "// COBP context object\n" +
                 "var ctx = {\n" +
                 "  bthread: function(name, context, func) {\n" +
                 "    // Store context mapping for later extraction\n" +
@@ -217,12 +221,8 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
                 "    // Delegate to bp.registerBThread\n" +
                 "    return bp.registerBThread(name, func);\n" +
                 "  },\n" +
-                "  Event: function(name, data) {\n" +
-                "    return bp.Event(name, data);\n" +
-                "  },\n" +
-                "  sync: function(options) {\n" +
-                "    return bp.sync(options);\n" +
-                "  },\n" +
+                "  sync: function(options) { return bp.sync(options); },\n" +
+                "  Event: function(name, data) { return bp.Event(name, data); },\n" +
                 "  Entity: function() { return {}; },\n" +
                 "  populateContext: function() { return {}; },\n" +
                 "  registerQuery: function() { return {}; },\n" +

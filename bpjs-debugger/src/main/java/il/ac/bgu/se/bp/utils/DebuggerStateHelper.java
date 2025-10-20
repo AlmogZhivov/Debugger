@@ -99,6 +99,27 @@ public class DebuggerStateHelper {
                     cobpContext = COBPContextHelper.extractCOBPContextFromSource(sourceCode, currentRunningBT);
                     if (cobpContext != null) {
                         logger.info("COBP context extracted from source code for b-thread: {0}", currentRunningBT);
+                        
+                        // Update the current context based on the currently running b-thread
+                        if (currentRunningBT != null && cobpContext.getAllBThreadContexts() != null) {
+                            String contextForCurrentBT = cobpContext.getAllBThreadContexts().get(currentRunningBT);
+                            if (contextForCurrentBT != null) {
+                                cobpContext.setCurrentBThreadContext(contextForCurrentBT);
+                                logger.info("Updated COBP context for currently running b-thread: {0} -> {1}", currentRunningBT, contextForCurrentBT);
+                            }
+                        } else {
+                            // If currentRunningBT is null, try to determine the current context from b-thread states
+                            String inferredCurrentBT = inferCurrentBThreadFromStates(syncSnapshot, cobpContext);
+                            if (inferredCurrentBT != null) {
+                                // Update the currentRunningBT field for consistency
+                                this.currentRunningBT = inferredCurrentBT;
+                                String contextForInferredBT = cobpContext.getAllBThreadContexts().get(inferredCurrentBT);
+                                if (contextForInferredBT != null) {
+                                    cobpContext.setCurrentBThreadContext(contextForInferredBT);
+                                    logger.info("Inferred COBP context from b-thread states: {0} -> {1}", inferredCurrentBT, contextForInferredBT);
+                                }
+                            }
+                        }
                     }
                     
                     // Then try to get additional context from runtime support (if available)
@@ -137,14 +158,18 @@ public class DebuggerStateHelper {
             EventsStatus eventsStatus = generateEventsStatus(syncSnapshot, state);
             Integer lineNumber = lastContextData == null ? null : lastContextData.frameCount() > 0 ? lastContextData.getFrame(0).getLineNumber() : null;
             boolean[] breakpoints = getBreakpoints(sourceInfo);
+            logger.info("Creating BPDebuggerState with currentRunningBT: {0}", currentRunningBT);
             BPDebuggerState debuggerState = new BPDebuggerState(bThreadInfoList, eventsStatus, eventsHistory, currentRunningBT, lineNumber, debuggerConfigs, ArrayUtils.toObject(breakpoints), globalEnv);
             logger.info("Setting COBP context in debugger state: {0}", cobpContext != null ? "SUCCESS" : "NULL");
             debuggerState.setCobpContext(cobpContext);
+            logger.info("BPDebuggerState created with currentRunningBT: {0}", debuggerState.getCurrentRunningBT());
             return debuggerState;
         }
+        logger.info("Creating BPDebuggerState (light mode) with currentRunningBT: {0}", currentRunningBT);
         BPDebuggerState debuggerState = new BPDebuggerState(new LinkedList<>(), new EventsStatus(), eventsHistory, currentRunningBT, null, debuggerConfigs, new Boolean[0], globalEnv);
         logger.info("Setting COBP context in debugger state (light mode): {0}", cobpContext != null ? "SUCCESS" : "NULL");
         debuggerState.setCobpContext(cobpContext);
+        logger.info("BPDebuggerState (light mode) created with currentRunningBT: {0}", debuggerState.getCurrentRunningBT());
         return debuggerState;
     }
 
@@ -175,7 +200,14 @@ public class DebuggerStateHelper {
         if (state.getDebuggerState() == RunnerState.State.JS_DEBUG && Context.getCurrentContext() != null) {
             bThreadInfoList.addAll(getRecentlyAddedBTInfo(lastContextData));
         } else {
+            // Preserve currentRunningBT if it was inferred from COBP context
+            String preservedCurrentRunningBT = currentRunningBT;
             cleanFields();
+            // Restore currentRunningBT if it was inferred (not null and not from JS_DEBUG)
+            if (preservedCurrentRunningBT != null) {
+                this.currentRunningBT = preservedCurrentRunningBT;
+                logger.info("Preserved inferred currentRunningBT: {0}", preservedCurrentRunningBT);
+            }
         }
         return bThreadInfoList;
     }
@@ -489,6 +521,64 @@ public class DebuggerStateHelper {
 
     public BPDebuggerState peekNextState(BProgramSyncSnapshot syncSnapshot, RunnerState state, Dim.ContextData lastContextData, Dim.SourceInfo sourceInfo) {
         return generateDebuggerStateInner(syncSnapshot, state, lastContextData, sourceInfo);
+    }
+
+    /**
+     * Infers the currently running b-thread from the sync snapshot and COBP context.
+     * This is used when currentRunningBT is null (e.g., during normal execution steps).
+     * 
+     * @param syncSnapshot The current sync snapshot
+     * @param cobpContext The COBP context containing all b-thread contexts
+     * @return The name of the inferred currently running b-thread, or null if cannot be determined
+     */
+    private String inferCurrentBThreadFromStates(BProgramSyncSnapshot syncSnapshot, COBPContext cobpContext) {
+        if (syncSnapshot == null || cobpContext == null || cobpContext.getAllBThreadContexts() == null) {
+            return null;
+        }
+
+        try {
+            Set<BThreadSyncSnapshot> bThreadSnapshots = syncSnapshot.getBThreadSnapshots();
+            if (bThreadSnapshots == null || bThreadSnapshots.isEmpty()) {
+                return null;
+            }
+
+            // Strategy 1: Look for b-threads that have just executed (have requested events)
+            for (BThreadSyncSnapshot bThreadSS : bThreadSnapshots) {
+                String bThreadName = bThreadSS.getName();
+                if (cobpContext.getAllBThreadContexts().containsKey(bThreadName)) {
+                    SyncStatement syncStatement = bThreadSS.getSyncStatement();
+                    if (syncStatement != null && !syncStatement.getRequest().isEmpty()) {
+                        // This b-thread has requested events, suggesting it just executed
+                        logger.info("Inferred current b-thread from request: {0}", bThreadName);
+                        return bThreadName;
+                    }
+                }
+            }
+
+            // Strategy 2: Look for b-threads that are waiting for events (likely to execute next)
+            for (BThreadSyncSnapshot bThreadSS : bThreadSnapshots) {
+                String bThreadName = bThreadSS.getName();
+                if (cobpContext.getAllBThreadContexts().containsKey(bThreadName)) {
+                    SyncStatement syncStatement = bThreadSS.getSyncStatement();
+                    if (syncStatement != null && syncStatement.getWaitFor() != null) {
+                        // This b-thread is waiting for events, might be the next to execute
+                        logger.info("Inferred current b-thread from wait: {0}", bThreadName);
+                        return bThreadName;
+                    }
+                }
+            }
+
+            // Strategy 3: Return the first COBP b-thread found (fallback)
+            for (String bThreadName : cobpContext.getAllBThreadContexts().keySet()) {
+                logger.info("Using fallback current b-thread: {0}", bThreadName);
+                return bThreadName;
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to infer current b-thread from states: {0}", e, e.getMessage());
+        }
+
+        return null;
     }
 
     public void updateCurrentEvent(String name) {

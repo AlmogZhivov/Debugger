@@ -30,6 +30,8 @@ import il.ac.bgu.se.bp.socket.state.BPDebuggerState;
 import il.ac.bgu.se.bp.socket.state.BThreadInfo;
 import il.ac.bgu.se.bp.socket.state.BThreadScope;
 import il.ac.bgu.se.bp.socket.state.EventInfo;
+import il.ac.bgu.se.bp.socket.state.EventsStatus;
+import il.ac.bgu.se.bp.socket.state.DebuggerConfigs;
 import il.ac.bgu.se.bp.socket.status.Status;
 import il.ac.bgu.se.bp.utils.DebuggerBProgramRunnerListener;
 import il.ac.bgu.se.bp.utils.DebuggerExecutorServiceMaker;
@@ -340,7 +342,12 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         try {
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
-            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            
+            // Convert to serialization-safe DTO
+            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
+            
+            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
+            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
             return new StepResponse(true, null, safeState);
         } catch (Exception e) {
             logger.error("nextSyncWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
@@ -521,7 +528,12 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         try {
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
-            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            
+            // Convert to serialization-safe DTO
+            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
+            
+            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
+            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
             return new StepResponse(true, null, safeState);
         } catch (Exception e) {
             logger.error("stepIntoWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
@@ -547,7 +559,12 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         try {
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
-            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            
+            // Convert to serialization-safe DTO
+            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
+            
+            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
+            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
             return new StepResponse(true, null, safeState);
         } catch (Exception e) {
             logger.error("stepOverWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
@@ -573,7 +590,12 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         try {
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
-            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            
+            // Convert to serialization-safe DTO
+            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
+            
+            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
+            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
             return new StepResponse(true, null, safeState);
         } catch (Exception e) {
             logger.error("stepOutWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
@@ -599,10 +621,13 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
             
-            // Try to create a serialization-safe copy
-            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            // Convert to serialization-safe DTO
+            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
             logger.info("stepIntoWithState - Successfully generated real debugger state with {0} b-threads", 
-                safeState.getbThreadInfoList() != null ? safeState.getbThreadInfoList().size() : 0);
+                dto.getbThreadInfoList() != null ? dto.getbThreadInfoList().size() : 0);
+            
+            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
+            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
             return new StepResponse(true, null, safeState);
             
         } catch (Exception e) {
@@ -625,10 +650,13 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
             
-            // Try to create a serialization-safe copy
-            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            // Convert to serialization-safe DTO
+            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
             logger.info("stepOverWithState - Successfully generated real debugger state with {0} b-threads", 
-                safeState.getbThreadInfoList() != null ? safeState.getbThreadInfoList().size() : 0);
+                dto.getbThreadInfoList() != null ? dto.getbThreadInfoList().size() : 0);
+            
+            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
+            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
             return new StepResponse(true, null, safeState);
             
         } catch (Exception e) {
@@ -651,10 +679,13 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
             
-            // Try to create a serialization-safe copy
-            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            // Convert to serialization-safe DTO
+            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
             logger.info("stepOutWithState - Successfully generated real debugger state with {0} b-threads", 
-                safeState.getbThreadInfoList() != null ? safeState.getbThreadInfoList().size() : 0);
+                dto.getbThreadInfoList() != null ? dto.getbThreadInfoList().size() : 0);
+            
+            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
+            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
             return new StepResponse(true, null, safeState);
             
         } catch (Exception e) {
@@ -677,10 +708,13 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
             
-            // Try to create a serialization-safe copy
-            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            // Convert to serialization-safe DTO
+            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
             logger.info("nextSyncWithState - Successfully generated real debugger state with {0} b-threads", 
-                safeState.getbThreadInfoList() != null ? safeState.getbThreadInfoList().size() : 0);
+                dto.getbThreadInfoList() != null ? dto.getbThreadInfoList().size() : 0);
+            
+            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
+            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
             return new StepResponse(true, null, safeState);
             
         } catch (Exception e) {
@@ -774,7 +808,124 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         return safeState;
     }
 
-
+    /**
+     * Converts a serialization-safe DTO back to BPDebuggerState for StepResponse.
+     * This ensures the returned object is safe for Gson serialization.
+     */
+    private BPDebuggerState convertDTOToBPDebuggerState(il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto) {
+        BPDebuggerState state = new BPDebuggerState();
+        
+        // Copy basic fields
+        state.setCurrentRunningBT(dto.getCurrentRunningBT());
+        state.setCurrentLineNumber(dto.getCurrentLineNumber());
+        
+        // Convert b-thread info list
+        if (dto.getbThreadInfoList() != null) {
+            List<BThreadInfo> bThreads = new ArrayList<>();
+            for (il.ac.bgu.se.bp.rest.response.BThreadInfoDTO bThreadDTO : dto.getbThreadInfoList()) {
+                BThreadInfo bThread = new BThreadInfo();
+                bThread.setName(bThreadDTO.getName());
+                
+                // Convert environment
+                if (bThreadDTO.getEnv() != null) {
+                    Map<Integer, BThreadScope> env = new HashMap<>();
+                    for (Map.Entry<Integer, il.ac.bgu.se.bp.rest.response.BThreadScopeDTO> entry : bThreadDTO.getEnv().entrySet()) {
+                        BThreadScope scope = new BThreadScope();
+                        scope.setScopeName(entry.getValue().getScopeName());
+                        scope.setCurrentLineNumber(entry.getValue().getCurrentLineNumber());
+                        scope.setVariables(entry.getValue().getVariables());
+                        env.put(entry.getKey(), scope);
+                    }
+                    bThread.setEnv(env);
+                }
+                
+                // Convert event sets
+                if (bThreadDTO.getRequested() != null) {
+                    Set<EventInfo> requested = new HashSet<>();
+                    for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : bThreadDTO.getRequested()) {
+                        requested.add(new EventInfo(eventDTO.getName()));
+                    }
+                    bThread.setRequested(requested);
+                }
+                
+                if (bThreadDTO.getBlocked() != null) {
+                    Set<EventInfo> blocked = new HashSet<>();
+                    for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : bThreadDTO.getBlocked()) {
+                        blocked.add(new EventInfo(eventDTO.getName()));
+                    }
+                    bThread.setBlocked(blocked);
+                }
+                
+                if (bThreadDTO.getWait() != null) {
+                    Set<EventInfo> wait = new HashSet<>();
+                    for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : bThreadDTO.getWait()) {
+                        wait.add(new EventInfo(eventDTO.getName()));
+                    }
+                    bThread.setWait(wait);
+                }
+                
+                bThreads.add(bThread);
+            }
+            state.setbThreadInfoList(bThreads);
+        }
+        
+        // Convert events status
+        if (dto.getEventsStatus() != null) {
+            EventsStatus eventsStatus = new EventsStatus();
+            if (dto.getEventsStatus().getRequested() != null) {
+                Set<EventInfo> requested = new HashSet<>();
+                for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : dto.getEventsStatus().getRequested()) {
+                    requested.add(new EventInfo(eventDTO.getName()));
+                }
+                eventsStatus.setRequested(requested);
+            }
+            if (dto.getEventsStatus().getBlocked() != null) {
+                List<EventInfo> blocked = new ArrayList<>();
+                for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : dto.getEventsStatus().getBlocked()) {
+                    blocked.add(new EventInfo(eventDTO.getName()));
+                }
+                eventsStatus.setBlocked(blocked);
+            }
+            if (dto.getEventsStatus().getWait() != null) {
+                List<EventInfo> wait = new ArrayList<>();
+                for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : dto.getEventsStatus().getWait()) {
+                    wait.add(new EventInfo(eventDTO.getName()));
+                }
+                eventsStatus.setWait(wait);
+            }
+            state.setEventsStatus(eventsStatus);
+        }
+        
+        // Convert global environment
+        if (dto.getGlobalEnv() != null) {
+            state.setGlobalEnv(new HashMap<>(dto.getGlobalEnv()));
+        }
+        
+        // Convert events history
+        if (dto.getEventsHistory() != null) {
+            SortedMap<Long, EventInfo> eventsHistory = new TreeMap<>();
+            for (Map.Entry<Long, String> entry : dto.getEventsHistory().entrySet()) {
+                eventsHistory.put(entry.getKey(), new EventInfo(entry.getValue()));
+            }
+            state.setEventsHistory(eventsHistory);
+        }
+        
+        // Convert breakpoints
+        if (dto.getBreakpoints() != null) {
+            state.setBreakpoints(dto.getBreakpoints());
+        }
+        
+        // Convert debugger configs
+        if (dto.getDebuggerConfigs() != null) {
+            DebuggerConfigs configs = new DebuggerConfigs();
+            configs.setToggleMuteBreakPoint(dto.getDebuggerConfigs().isSkipBreakpoints());
+            configs.setToggleMuteSyncPoints(dto.getDebuggerConfigs().isSkipSyncPoints());
+            configs.setToggleWaitForExternalEvents(dto.getDebuggerConfigs().isWaitForExternalEvents());
+            state.setDebuggerConfigs(configs);
+        }
+        
+        return state;
+    }
 
     @Override
     public BooleanResponse setBreakpoint(final int lineNumber, final boolean stopOnBreakpoint) {

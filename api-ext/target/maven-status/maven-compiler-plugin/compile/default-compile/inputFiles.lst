@@ -1,10 +1,13 @@
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\SetSyncSnapshotRequest.java
+C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\DebuggerStateDTO.java
+C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\BThreadInfoDTO.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\StepResponse.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\ToggleSyncStatesRequest.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\state\EventInfo.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\utils\Pair.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\console\LogType.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\ImportSyncSnapshotRequest.java
+C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\EventInfoDTO.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\error\ErrorCode.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\GetSyncSnapshotsResponse.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\EventsHistoryResponse.java
@@ -14,6 +17,7 @@ C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\r
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\DebugRequest.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\state\EventsStatus.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\controller\BPjsIDERestController.java
+C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\DebuggerConfigsDTO.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\SyncSnapshot.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\SetBreakpointRequest.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\ToggleWaitForExternalRequest.java
@@ -25,4 +29,6 @@ C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\r
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\state\BThreadScope.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\console\ConsoleMessage.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\request\ExternalEventRequest.java
+C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\BThreadScopeDTO.java
+C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\EventsStatusDTO.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\state\BThreadInfo.java

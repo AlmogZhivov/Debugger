@@ -1,5 +1,6 @@
 il\ac\bgu\se\bp\debugger\commands\StepInto.class
 il\ac\bgu\se\bp\debugger\engine\events\BPStateEvent.class
+il\ac\bgu\se\bp\execution\DebuggerStateConverter.class
 il\ac\bgu\se\bp\config\BPJsDebuggerConfiguration.class
 il\ac\bgu\se\bp\execution\BPJsDebuggerImpl.class
 il\ac\bgu\se\bp\utils\DebuggerStateHelper.class

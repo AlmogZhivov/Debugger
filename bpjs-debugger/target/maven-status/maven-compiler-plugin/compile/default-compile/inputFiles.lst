@@ -7,6 +7,7 @@ C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\execution\manage\DebuggerFactoryImpl.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\execution\BPJsDebuggerImpl.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\debugger\engine\events\ProgramStatusEvent.java
+C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\execution\DebuggerStateConverter.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\execution\manage\SerializableSyncSnapshot.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\debugger\commands\StepOver.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\debugger\commands\Continue.java

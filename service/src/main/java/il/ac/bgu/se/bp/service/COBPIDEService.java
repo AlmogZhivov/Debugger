@@ -44,4 +44,10 @@ public interface COBPIDEService {
     StepResponse stepOverWithState(String userId);
     StepResponse stepOutWithState(String userId);
     StepResponse nextSyncWithState(String userId);
+    
+    // Additional StepResponse methods for regular step operations
+    StepResponse stepIntoWithStepResponse(String userId);
+    StepResponse stepOverWithStepResponse(String userId);
+    StepResponse stepOutWithStepResponse(String userId);
+    StepResponse nextSyncWithStepResponse(String userId);
 }

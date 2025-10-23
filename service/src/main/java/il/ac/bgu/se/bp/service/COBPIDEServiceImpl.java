@@ -8,18 +8,15 @@ import il.ac.bgu.se.bp.rest.request.*;
 import il.ac.bgu.se.bp.rest.response.BooleanResponse;
 import il.ac.bgu.se.bp.rest.response.DebugResponse;
 import il.ac.bgu.se.bp.rest.response.EventsHistoryResponse;
+import il.ac.bgu.se.bp.rest.response.StepResponse;
 import il.ac.bgu.se.bp.rest.response.SyncSnapshot;
 import il.ac.bgu.se.bp.service.code.SourceCodeHelper;
-import il.ac.bgu.se.bp.service.manage.PrototypeContextFactory;
 import il.ac.bgu.se.bp.service.manage.SessionHandler;
 import il.ac.bgu.se.bp.utils.logger.Logger;
-import org.mozilla.javascript.ContextFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.util.StringUtils;
-
-import javax.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -43,9 +40,6 @@ public class COBPIDEServiceImpl implements COBPIDEService {
     @Autowired
     @Qualifier("cobpDebuggerFactory")
     private DebuggerFactory<BooleanResponse> cobpDebuggerFactory;
-
-    @Autowired
-    private PrototypeContextFactory prototypeContextFactory;
 
     // Note: ContextFactory.initGlobal() is already called by BPjsIDEServiceImpl
     // No need to initialize it again here to avoid IllegalStateException
@@ -361,5 +355,86 @@ public class COBPIDEServiceImpl implements COBPIDEService {
 
     private BooleanResponse createErrorResponse(ErrorCode errorCode) {
         return new BooleanResponse(false, errorCode);
+    }
+
+    // New methods that return StepResponse with debugger state
+    @Override
+    public StepResponse stepIntoWithState(String userId) {
+        if (!sessionHandler.validateUserId(userId)) {
+            return new StepResponse(false, ErrorCode.UNKNOWN_USER.toString(), null);
+        }
+
+        BPJsDebugger<BooleanResponse> cobpDebugger = sessionHandler.getBPjsDebuggerByUser(userId);
+        if (cobpDebugger == null) {
+            return new StepResponse(false, ErrorCode.UNKNOWN_USER.toString(), null);
+        }
+
+        // Debug: Log the actual debugger type
+        logger.info("Debugger type: {0}", cobpDebugger.getClass().getName());
+        logger.info("Is COBPDebuggerImpl: {0}", cobpDebugger instanceof il.ac.bgu.se.bp.execution.COBPDebuggerImpl);
+
+        // Cast to COBPDebuggerImpl to access the new method
+        if (cobpDebugger instanceof il.ac.bgu.se.bp.execution.COBPDebuggerImpl) {
+            return ((il.ac.bgu.se.bp.execution.COBPDebuggerImpl) cobpDebugger).stepIntoWithState();
+        } else {
+            return new StepResponse(false, "NOT_COBP_DEBUGGER - Actual type: " + cobpDebugger.getClass().getName(), null);
+        }
+    }
+
+    @Override
+    public StepResponse stepOverWithState(String userId) {
+        if (!sessionHandler.validateUserId(userId)) {
+            return new StepResponse(false, ErrorCode.UNKNOWN_USER.toString(), null);
+        }
+
+        BPJsDebugger<BooleanResponse> cobpDebugger = sessionHandler.getBPjsDebuggerByUser(userId);
+        if (cobpDebugger == null) {
+            return new StepResponse(false, ErrorCode.UNKNOWN_USER.toString(), null);
+        }
+
+        // Cast to COBPDebuggerImpl to access the new method
+        if (cobpDebugger instanceof il.ac.bgu.se.bp.execution.COBPDebuggerImpl) {
+            return ((il.ac.bgu.se.bp.execution.COBPDebuggerImpl) cobpDebugger).stepOverWithState();
+        } else {
+            return new StepResponse(false, "NOT_COBP_DEBUGGER", null);
+        }
+    }
+
+    @Override
+    public StepResponse stepOutWithState(String userId) {
+        if (!sessionHandler.validateUserId(userId)) {
+            return new StepResponse(false, ErrorCode.UNKNOWN_USER.toString(), null);
+        }
+
+        BPJsDebugger<BooleanResponse> cobpDebugger = sessionHandler.getBPjsDebuggerByUser(userId);
+        if (cobpDebugger == null) {
+            return new StepResponse(false, ErrorCode.UNKNOWN_USER.toString(), null);
+        }
+
+        // Cast to COBPDebuggerImpl to access the new method
+        if (cobpDebugger instanceof il.ac.bgu.se.bp.execution.COBPDebuggerImpl) {
+            return ((il.ac.bgu.se.bp.execution.COBPDebuggerImpl) cobpDebugger).stepOutWithState();
+        } else {
+            return new StepResponse(false, "NOT_COBP_DEBUGGER", null);
+        }
+    }
+
+    @Override
+    public StepResponse nextSyncWithState(String userId) {
+        if (!sessionHandler.validateUserId(userId)) {
+            return new StepResponse(false, ErrorCode.UNKNOWN_USER.toString(), null);
+        }
+
+        BPJsDebugger<BooleanResponse> cobpDebugger = sessionHandler.getBPjsDebuggerByUser(userId);
+        if (cobpDebugger == null) {
+            return new StepResponse(false, ErrorCode.UNKNOWN_USER.toString(), null);
+        }
+
+        // Cast to COBPDebuggerImpl to access the new method
+        if (cobpDebugger instanceof il.ac.bgu.se.bp.execution.COBPDebuggerImpl) {
+            return ((il.ac.bgu.se.bp.execution.COBPDebuggerImpl) cobpDebugger).nextSyncWithState();
+        } else {
+            return new StepResponse(false, "NOT_COBP_DEBUGGER", null);
+        }
     }
 }

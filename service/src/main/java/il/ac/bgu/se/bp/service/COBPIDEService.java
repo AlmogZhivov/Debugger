@@ -4,6 +4,7 @@ import il.ac.bgu.se.bp.rest.request.*;
 import il.ac.bgu.se.bp.rest.response.BooleanResponse;
 import il.ac.bgu.se.bp.rest.response.DebugResponse;
 import il.ac.bgu.se.bp.rest.response.EventsHistoryResponse;
+import il.ac.bgu.se.bp.rest.response.StepResponse;
 import il.ac.bgu.se.bp.rest.response.SyncSnapshot;
 
 /**
@@ -37,4 +38,10 @@ public interface COBPIDEService {
     BooleanResponse setSyncSnapshot(String userId, SetSyncSnapshotRequest setSyncSnapshotRequest);
     SyncSnapshot exportSyncSnapshot(String userId);
     BooleanResponse importSyncSnapshot(String userId, ImportSyncSnapshotRequest importSyncSnapshotRequest);
+
+    // New methods that return StepResponse with debugger state
+    StepResponse stepIntoWithState(String userId);
+    StepResponse stepOverWithState(String userId);
+    StepResponse stepOutWithState(String userId);
+    StepResponse nextSyncWithState(String userId);
 }

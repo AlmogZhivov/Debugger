@@ -5,6 +5,7 @@ import il.ac.bgu.se.bp.rest.request.*;
 import il.ac.bgu.se.bp.rest.response.BooleanResponse;
 import il.ac.bgu.se.bp.rest.response.DebugResponse;
 import il.ac.bgu.se.bp.rest.response.EventsHistoryResponse;
+import il.ac.bgu.se.bp.rest.response.StepResponse;
 import il.ac.bgu.se.bp.rest.response.SyncSnapshot;
 import il.ac.bgu.se.bp.service.COBPIDEService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -165,5 +166,30 @@ public class COBPIDERestControllerImpl implements BPjsIDERestController {
     BooleanResponse importSyncSnapshot(@RequestHeader("userId") String userId,
                                        @RequestBody ImportSyncSnapshotRequest importSyncSnapshotRequest) {
         return cobpIDEService.importSyncSnapshot(userId, importSyncSnapshotRequest);
+    }
+
+    // New endpoints that return StepResponse with debugger state
+    @RequestMapping(value = "/stepIntoWithState", method = RequestMethod.GET)
+    public @ResponseBody
+    StepResponse stepIntoWithState(@RequestHeader("userId") String userId) {
+        return cobpIDEService.stepIntoWithState(userId);
+    }
+
+    @RequestMapping(value = "/stepOverWithState", method = RequestMethod.GET)
+    public @ResponseBody
+    StepResponse stepOverWithState(@RequestHeader("userId") String userId) {
+        return cobpIDEService.stepOverWithState(userId);
+    }
+
+    @RequestMapping(value = "/stepOutWithState", method = RequestMethod.GET)
+    public @ResponseBody
+    StepResponse stepOutWithState(@RequestHeader("userId") String userId) {
+        return cobpIDEService.stepOutWithState(userId);
+    }
+
+    @RequestMapping(value = "/nextSyncWithState", method = RequestMethod.GET)
+    public @ResponseBody
+    StepResponse nextSyncWithState(@RequestHeader("userId") String userId) {
+        return cobpIDEService.nextSyncWithState(userId);
     }
 }

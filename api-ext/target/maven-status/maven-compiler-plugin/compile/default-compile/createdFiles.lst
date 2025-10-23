@@ -31,4 +31,5 @@ il\ac\bgu\se\bp\rest\response\BooleanResponse.class
 il\ac\bgu\se\bp\rest\response\BThreadScopeDTO.class
 il\ac\bgu\se\bp\rest\request\ToggleBreakpointsRequest.class
 il\ac\bgu\se\bp\socket\status\ProgramStatus.class
+il\ac\bgu\se\bp\rest\response\StepStateDTO.class
 il\ac\bgu\se\bp\utils\Pair.class

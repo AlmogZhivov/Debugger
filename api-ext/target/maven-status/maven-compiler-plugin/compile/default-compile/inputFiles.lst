@@ -11,6 +11,7 @@ C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\r
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\error\ErrorCode.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\GetSyncSnapshotsResponse.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\EventsHistoryResponse.java
+C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\StepStateDTO.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\socket\status\Status.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\BooleanResponse.java
 C:\Users\User\IdeaProjects\Debugger\api-ext\src\main\java\il\ac\bgu\se\bp\rest\response\DebugResponse.java

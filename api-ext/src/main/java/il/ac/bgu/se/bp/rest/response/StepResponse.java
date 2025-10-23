@@ -1,20 +1,19 @@
 package il.ac.bgu.se.bp.rest.response;
 
-import il.ac.bgu.se.bp.socket.state.BPDebuggerState;
-
 /**
  * Response for step operations that includes both success status and debugger state.
  * This allows HTTP clients to get the debugger state directly without relying on WebSocket events.
+ * Uses StepStateDTO to avoid circular reference issues during serialization.
  */
 public class StepResponse {
     private boolean success;
     private String errorCode;
-    private BPDebuggerState debuggerState;
+    private StepStateDTO debuggerState;
 
     public StepResponse() {
     }
 
-    public StepResponse(boolean success, String errorCode, BPDebuggerState debuggerState) {
+    public StepResponse(boolean success, String errorCode, StepStateDTO debuggerState) {
         this.success = success;
         this.errorCode = errorCode;
         this.debuggerState = debuggerState;
@@ -36,11 +35,11 @@ public class StepResponse {
         this.errorCode = errorCode;
     }
 
-    public BPDebuggerState getDebuggerState() {
+    public StepStateDTO getDebuggerState() {
         return debuggerState;
     }
 
-    public void setDebuggerState(BPDebuggerState debuggerState) {
+    public void setDebuggerState(StepStateDTO debuggerState) {
         this.debuggerState = debuggerState;
     }
 

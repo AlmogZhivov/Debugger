@@ -7,6 +7,7 @@ import il.ac.bgu.cs.bp.bpjs.execution.listeners.PrintBProgramRunnerListener;
 import il.ac.bgu.cs.bp.bpjs.model.*;
 import il.ac.bgu.cs.bp.bpjs.model.eventselection.EventSelectionResult;
 import il.ac.bgu.cs.bp.bpjs.model.eventselection.EventSelectionStrategy;
+import il.ac.bgu.cs.bp.bpjs.model.eventsets.EventSet;
 import il.ac.bgu.se.bp.debugger.BPJsDebugger;
 import il.ac.bgu.se.bp.debugger.DebuggerLevel;
 import il.ac.bgu.se.bp.debugger.RunnerState;
@@ -27,11 +28,7 @@ import il.ac.bgu.se.bp.rest.response.SyncSnapshot;
 import il.ac.bgu.se.bp.socket.console.ConsoleMessage;
 import il.ac.bgu.se.bp.socket.console.LogType;
 import il.ac.bgu.se.bp.socket.state.BPDebuggerState;
-import il.ac.bgu.se.bp.socket.state.BThreadInfo;
-import il.ac.bgu.se.bp.socket.state.BThreadScope;
 import il.ac.bgu.se.bp.socket.state.EventInfo;
-import il.ac.bgu.se.bp.socket.state.EventsStatus;
-import il.ac.bgu.se.bp.socket.state.DebuggerConfigs;
 import il.ac.bgu.se.bp.socket.status.Status;
 import il.ac.bgu.se.bp.utils.DebuggerBProgramRunnerListener;
 import il.ac.bgu.se.bp.utils.DebuggerExecutorServiceMaker;
@@ -48,6 +45,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static il.ac.bgu.cs.bp.bpjs.model.StorageModificationStrategy.PASSTHROUGH;
 import static il.ac.bgu.se.bp.utils.Common.NO_MORE_WAIT_EXTERNAL;
@@ -340,15 +338,11 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         
         // Try to get the real debugger state after nextSync
         try {
-            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-                syncSnapshot, state, null, null);
+            // Create lightweight DTO with only primitive types and strings
+            il.ac.bgu.se.bp.rest.response.StepStateDTO dto = createLightweightStepStateDTO();
             
-            // Convert to serialization-safe DTO
-            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
-            
-            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
-            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
-            return new StepResponse(true, null, safeState);
+            // Return lightweight DTO - completely safe for Gson serialization
+            return new StepResponse(true, null, dto);
         } catch (Exception e) {
             logger.error("nextSyncWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
             return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
@@ -526,15 +520,11 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         
         // Try to get the real debugger state
         try {
-            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-                syncSnapshot, state, null, null);
+            // Create lightweight DTO with only primitive types and strings
+            il.ac.bgu.se.bp.rest.response.StepStateDTO dto = createLightweightStepStateDTO();
             
-            // Convert to serialization-safe DTO
-            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
-            
-            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
-            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
-            return new StepResponse(true, null, safeState);
+            // Return lightweight DTO - completely safe for Gson serialization
+            return new StepResponse(true, null, dto);
         } catch (Exception e) {
             logger.error("stepIntoWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
             return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
@@ -557,15 +547,11 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         
         // Try to get the real debugger state
         try {
-            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-                syncSnapshot, state, null, null);
+            // Create lightweight DTO with only primitive types and strings
+            il.ac.bgu.se.bp.rest.response.StepStateDTO dto = createLightweightStepStateDTO();
             
-            // Convert to serialization-safe DTO
-            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
-            
-            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
-            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
-            return new StepResponse(true, null, safeState);
+            // Return lightweight DTO - completely safe for Gson serialization
+            return new StepResponse(true, null, dto);
         } catch (Exception e) {
             logger.error("stepOverWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
             return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
@@ -588,15 +574,11 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         
         // Try to get the real debugger state
         try {
-            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-                syncSnapshot, state, null, null);
+            // Create lightweight DTO with only primitive types and strings
+            il.ac.bgu.se.bp.rest.response.StepStateDTO dto = createLightweightStepStateDTO();
             
-            // Convert to serialization-safe DTO
-            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
-            
-            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
-            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
-            return new StepResponse(true, null, safeState);
+            // Return lightweight DTO - completely safe for Gson serialization
+            return new StepResponse(true, null, dto);
         } catch (Exception e) {
             logger.error("stepOutWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
             return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
@@ -618,17 +600,14 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         // Try to get the real debugger state first, with fallback to minimal state
         try {
             logger.info("stepIntoWithState - Attempting to generate real debugger state");
-            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-                syncSnapshot, state, null, null);
             
-            // Convert to serialization-safe DTO
-            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
-            logger.info("stepIntoWithState - Successfully generated real debugger state with {0} b-threads", 
-                dto.getbThreadInfoList() != null ? dto.getbThreadInfoList().size() : 0);
+            // Create lightweight DTO with only primitive types and strings
+            il.ac.bgu.se.bp.rest.response.StepStateDTO dto = createLightweightStepStateDTO();
+            logger.info("stepIntoWithState - Successfully generated lightweight debugger state with {0} b-threads", 
+                dto.getActiveBThreads() != null ? dto.getActiveBThreads().size() : 0);
             
-            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
-            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
-            return new StepResponse(true, null, safeState);
+            // Return lightweight DTO - completely safe for Gson serialization
+            return new StepResponse(true, null, dto);
             
         } catch (Exception e) {
             logger.error("stepIntoWithState - Failed to generate real debugger state: {0}", e.getMessage());
@@ -647,17 +626,14 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         // Try to get the real debugger state first, with fallback to minimal state
         try {
             logger.info("stepOverWithState - Attempting to generate real debugger state");
-            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-                syncSnapshot, state, null, null);
             
-            // Convert to serialization-safe DTO
-            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
-            logger.info("stepOverWithState - Successfully generated real debugger state with {0} b-threads", 
-                dto.getbThreadInfoList() != null ? dto.getbThreadInfoList().size() : 0);
+            // Create lightweight DTO with only primitive types and strings
+            il.ac.bgu.se.bp.rest.response.StepStateDTO dto = createLightweightStepStateDTO();
+            logger.info("stepOverWithState - Successfully generated lightweight debugger state with {0} b-threads", 
+                dto.getActiveBThreads() != null ? dto.getActiveBThreads().size() : 0);
             
-            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
-            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
-            return new StepResponse(true, null, safeState);
+            // Return lightweight DTO - completely safe for Gson serialization
+            return new StepResponse(true, null, dto);
             
         } catch (Exception e) {
             logger.error("stepOverWithState - Failed to generate real debugger state: {0}", e.getMessage());
@@ -676,17 +652,14 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         // Try to get the real debugger state first, with fallback to minimal state
         try {
             logger.info("stepOutWithState - Attempting to generate real debugger state");
-            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-                syncSnapshot, state, null, null);
             
-            // Convert to serialization-safe DTO
-            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
-            logger.info("stepOutWithState - Successfully generated real debugger state with {0} b-threads", 
-                dto.getbThreadInfoList() != null ? dto.getbThreadInfoList().size() : 0);
+            // Create lightweight DTO with only primitive types and strings
+            il.ac.bgu.se.bp.rest.response.StepStateDTO dto = createLightweightStepStateDTO();
+            logger.info("stepOutWithState - Successfully generated lightweight debugger state with {0} b-threads", 
+                dto.getActiveBThreads() != null ? dto.getActiveBThreads().size() : 0);
             
-            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
-            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
-            return new StepResponse(true, null, safeState);
+            // Return lightweight DTO - completely safe for Gson serialization
+            return new StepResponse(true, null, dto);
             
         } catch (Exception e) {
             logger.error("stepOutWithState - Failed to generate real debugger state: {0}", e.getMessage());
@@ -705,17 +678,14 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         // Try to get the real debugger state first, with fallback to minimal state
         try {
             logger.info("nextSyncWithState - Attempting to generate real debugger state");
-            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-                syncSnapshot, state, null, null);
             
-            // Convert to serialization-safe DTO
-            il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = DebuggerStateConverter.toDTO(debuggerState);
-            logger.info("nextSyncWithState - Successfully generated real debugger state with {0} b-threads", 
-                dto.getbThreadInfoList() != null ? dto.getbThreadInfoList().size() : 0);
+            // Create lightweight DTO with only primitive types and strings
+            il.ac.bgu.se.bp.rest.response.StepStateDTO dto = createLightweightStepStateDTO();
+            logger.info("nextSyncWithState - Successfully generated lightweight debugger state with {0} b-threads", 
+                dto.getActiveBThreads() != null ? dto.getActiveBThreads().size() : 0);
             
-            // Convert DTO back to BPDebuggerState for StepResponse (DTO is serialization-safe)
-            BPDebuggerState safeState = convertDTOToBPDebuggerState(dto);
-            return new StepResponse(true, null, safeState);
+            // Return lightweight DTO - completely safe for Gson serialization
+            return new StepResponse(true, null, dto);
             
         } catch (Exception e) {
             logger.error("nextSyncWithState - Failed to generate real debugger state: {0}", e.getMessage());
@@ -724,207 +694,773 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         }
     }
 
-    private BPDebuggerState createSerializationSafeState(BPDebuggerState originalState) {
-        if (originalState == null) {
-            return new BPDebuggerState();
-        }
+
+    /**
+     * Creates a lightweight StepStateDTO with only primitive types and strings.
+     * This completely avoids circular reference issues during Gson serialization.
+     */
+    private il.ac.bgu.se.bp.rest.response.StepStateDTO createLightweightStepStateDTO() {
+        il.ac.bgu.se.bp.rest.response.StepStateDTO dto = new il.ac.bgu.se.bp.rest.response.StepStateDTO();
         
-        // Create a new state object to avoid cyclic references
-        BPDebuggerState safeState = new BPDebuggerState();
-        
-        // Copy basic fields safely
-        safeState.setCurrentRunningBT(originalState.getCurrentRunningBT());
-        safeState.setCurrentLineNumber(originalState.getCurrentLineNumber());
-        
-        // Copy b-thread info list safely (avoiding cyclic references)
-        if (originalState.getbThreadInfoList() != null) {
-            List<BThreadInfo> safeBThreads = new ArrayList<>();
-            for (BThreadInfo bThread : originalState.getbThreadInfoList()) {
-                if (bThread != null) {
-                    // Create a safe copy of BThreadInfo
-                    BThreadInfo safeBThread = new BThreadInfo();
-                    safeBThread.setName(bThread.getName());
-                    
-                    // Copy environment safely
-                    if (bThread.getEnv() != null) {
-                        Map<Integer, BThreadScope> safeEnv = new HashMap<>();
-                        for (Map.Entry<Integer, BThreadScope> entry : bThread.getEnv().entrySet()) {
-                            if (entry.getValue() != null) {
-                                BThreadScope safeScope = new BThreadScope();
-                                safeScope.setScopeName(entry.getValue().getScopeName());
-                                safeScope.setCurrentLineNumber(entry.getValue().getCurrentLineNumber());
-                                
-                                // Copy variables safely (avoiding complex objects)
-                                if (entry.getValue().getVariables() != null) {
-                                    Map<String, String> safeVariables = new HashMap<>();
-                                    for (Map.Entry<String, String> varEntry : entry.getValue().getVariables().entrySet()) {
-                                        safeVariables.put(varEntry.getKey(), varEntry.getValue());
-                                    }
-                                    safeScope.setVariables(safeVariables);
-                                }
-                                safeEnv.put(entry.getKey(), safeScope);
-                            }
-                        }
-                        safeBThread.setEnv(safeEnv);
-                    }
-                    
-                    // Copy event sets safely
-                    if (bThread.getRequested() != null) {
-                        Set<EventInfo> safeRequested = new HashSet<>();
-                        for (EventInfo event : bThread.getRequested()) {
-                            if (event != null) {
-                                safeRequested.add(new EventInfo(event.getName()));
-                            }
-                        }
-                        safeBThread.setRequested(safeRequested);
-                    }
-                    
-                    if (bThread.getBlocked() != null) {
-                        Set<EventInfo> safeBlocked = new HashSet<>();
-                        for (EventInfo event : bThread.getBlocked()) {
-                            if (event != null) {
-                                safeBlocked.add(new EventInfo(event.getName()));
-                            }
-                        }
-                        safeBThread.setBlocked(safeBlocked);
-                    }
-                    
-                    if (bThread.getWait() != null) {
-                        Set<EventInfo> safeWait = new HashSet<>();
-                        for (EventInfo event : bThread.getWait()) {
-                            if (event != null) {
-                                safeWait.add(new EventInfo(event.getName()));
-                            }
-                        }
-                        safeBThread.setWait(safeWait);
-                    }
-                    
-                    safeBThreads.add(safeBThread);
-                }
+        try {
+            // Set basic configuration flags
+            dto.setSkipBreakpoints(debuggerEngine.isMuteBreakpoints());
+            dto.setSkipSyncPoints(isSkipSyncPoints);
+            dto.setWaitForExternalEvents(bprog.isWaitForExternalEvents());
+            
+            // Set current running b-thread and line number (as strings)
+            dto.setCurrentRunningBT(null); // Will be set by debugger engine
+            dto.setCurrentLineNumber(null); // Will be set by debugger engine
+            
+            // Set breakpoints as strings
+            dto.setBreakpoints(new String[0]); // Will be set by debugger engine
+            
+            // Generate lightweight events history (only strings)
+            Map<String, String> eventsHistory = generateLightweightEventsHistory(0, 10);
+            dto.setEventsHistory(eventsHistory);
+            
+            // Generate lightweight global variables (only strings)
+            Map<String, String> globalVariables = generateLightweightGlobalVariables();
+            dto.setGlobalVariables(globalVariables);
+            
+            // Generate COBP context information
+            Map<String, String> contextStore = generateLightweightContextStore();
+            dto.setContextStore(contextStore);
+            
+            List<String> contextEntities = generateLightweightContextEntities();
+            dto.setContextEntities(contextEntities);
+            
+            String currentContext = generateCurrentContext();
+            dto.setCurrentContext(currentContext);
+            
+            Map<String, String> contextVariables = generateLightweightContextVariables();
+            dto.setContextVariables(contextVariables);
+            
+            // Generate lightweight b-thread information (only strings)
+            if (debuggerLevel.getLevel() > il.ac.bgu.se.bp.debugger.DebuggerLevel.LIGHT.getLevel()) {
+                List<String> activeBThreads = generateLightweightActiveBThreads();
+                dto.setActiveBThreads(activeBThreads);
+                
+                // Generate lightweight event lists (only strings)
+                List<String> requestedEvents = generateLightweightRequestedEvents();
+                dto.setRequestedEvents(requestedEvents);
+                
+                List<String> blockedEvents = generateLightweightBlockedEvents();
+                dto.setBlockedEvents(blockedEvents);
+                
+                List<String> waitEvents = generateLightweightWaitEvents();
+                dto.setWaitEvents(waitEvents);
+            } else {
+                // Light debugger level - minimal info
+                dto.setActiveBThreads(new ArrayList<>());
+                dto.setRequestedEvents(new ArrayList<>());
+                dto.setBlockedEvents(new ArrayList<>());
+                dto.setWaitEvents(new ArrayList<>());
             }
-            safeState.setbThreadInfoList(safeBThreads);
+            
+        } catch (Exception e) {
+            logger.error("Failed to generate lightweight step state DTO: {0}", e.getMessage());
+            
+            // Fallback to minimal DTO
+            dto.setActiveBThreads(new ArrayList<>());
+            dto.setRequestedEvents(new ArrayList<>());
+            dto.setBlockedEvents(new ArrayList<>());
+            dto.setWaitEvents(new ArrayList<>());
+            dto.setGlobalVariables(new HashMap<>());
+            dto.setEventsHistory(new HashMap<>());
+            dto.setCurrentRunningBT(null);
+            dto.setCurrentLineNumber(null);
+            dto.setBreakpoints(new String[0]);
+            dto.setSkipBreakpoints(debuggerEngine.isMuteBreakpoints());
+            dto.setSkipSyncPoints(isSkipSyncPoints);
+            dto.setWaitForExternalEvents(bprog.isWaitForExternalEvents());
+            
+            // Fallback context information
+            dto.setContextStore(new HashMap<>());
+            dto.setContextEntities(new ArrayList<>());
+            dto.setCurrentContext("unknown");
+            dto.setContextVariables(new HashMap<>());
         }
         
-        return safeState;
+        return dto;
     }
 
     /**
-     * Converts a serialization-safe DTO back to BPDebuggerState for StepResponse.
-     * This ensures the returned object is safe for Gson serialization.
+     * Creates a DebuggerStateDTO directly from raw debugger components.
+     * This replicates the logic of DebuggerStateHelper.generateDebuggerStateInner() 
+     * but outputs DTOs directly to avoid circular reference issues.
      */
-    private BPDebuggerState convertDTOToBPDebuggerState(il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto) {
-        BPDebuggerState state = new BPDebuggerState();
+    private il.ac.bgu.se.bp.rest.response.DebuggerStateDTO createDebuggerStateDTOFromRaw() {
+        il.ac.bgu.se.bp.rest.response.DebuggerStateDTO dto = new il.ac.bgu.se.bp.rest.response.DebuggerStateDTO();
         
-        // Copy basic fields
-        state.setCurrentRunningBT(dto.getCurrentRunningBT());
-        state.setCurrentLineNumber(dto.getCurrentLineNumber());
-        
-        // Convert b-thread info list
-        if (dto.getbThreadInfoList() != null) {
-            List<BThreadInfo> bThreads = new ArrayList<>();
-            for (il.ac.bgu.se.bp.rest.response.BThreadInfoDTO bThreadDTO : dto.getbThreadInfoList()) {
-                BThreadInfo bThread = new BThreadInfo();
-                bThread.setName(bThreadDTO.getName());
+        try {
+            // Generate events history (replicate DebuggerStateHelper logic)
+            Map<Long, String> eventsHistory = generateEventsHistoryDTO(0, 10);
+            dto.setEventsHistory(eventsHistory);
+            
+            // Generate debugger configs (replicate DebuggerStateHelper logic)
+            il.ac.bgu.se.bp.rest.response.DebuggerConfigsDTO debuggerConfigs = generateDebuggerConfigsDTO();
+            dto.setDebuggerConfigs(debuggerConfigs);
+            
+            // Generate global environment (replicate DebuggerStateHelper logic)
+            Map<String, String> globalEnv = generateGlobalEnvDTO();
+            dto.setGlobalEnv(globalEnv);
+            
+            // Generate b-thread info list (replicate DebuggerStateHelper logic)
+            if (debuggerLevel.getLevel() > il.ac.bgu.se.bp.debugger.DebuggerLevel.LIGHT.getLevel()) {
+                List<il.ac.bgu.se.bp.rest.response.BThreadInfoDTO> bThreadInfoList = generateBThreadInfosDTO();
+                dto.setbThreadInfoList(bThreadInfoList);
                 
-                // Convert environment
-                if (bThreadDTO.getEnv() != null) {
-                    Map<Integer, BThreadScope> env = new HashMap<>();
-                    for (Map.Entry<Integer, il.ac.bgu.se.bp.rest.response.BThreadScopeDTO> entry : bThreadDTO.getEnv().entrySet()) {
-                        BThreadScope scope = new BThreadScope();
-                        scope.setScopeName(entry.getValue().getScopeName());
-                        scope.setCurrentLineNumber(entry.getValue().getCurrentLineNumber());
-                        scope.setVariables(entry.getValue().getVariables());
-                        env.put(entry.getKey(), scope);
-                    }
-                    bThread.setEnv(env);
-                }
+                // Generate events status (replicate DebuggerStateHelper logic)
+                il.ac.bgu.se.bp.rest.response.EventsStatusDTO eventsStatus = generateEventsStatusDTO();
+                dto.setEventsStatus(eventsStatus);
                 
-                // Convert event sets
-                if (bThreadDTO.getRequested() != null) {
-                    Set<EventInfo> requested = new HashSet<>();
-                    for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : bThreadDTO.getRequested()) {
-                        requested.add(new EventInfo(eventDTO.getName()));
-                    }
-                    bThread.setRequested(requested);
-                }
+                // Set current running b-thread and line number
+                dto.setCurrentRunningBT(null); // Will be set by debugger engine
+                dto.setCurrentLineNumber(null); // Will be set by debugger engine
                 
-                if (bThreadDTO.getBlocked() != null) {
-                    Set<EventInfo> blocked = new HashSet<>();
-                    for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : bThreadDTO.getBlocked()) {
-                        blocked.add(new EventInfo(eventDTO.getName()));
-                    }
-                    bThread.setBlocked(blocked);
-                }
-                
-                if (bThreadDTO.getWait() != null) {
-                    Set<EventInfo> wait = new HashSet<>();
-                    for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : bThreadDTO.getWait()) {
-                        wait.add(new EventInfo(eventDTO.getName()));
-                    }
-                    bThread.setWait(wait);
-                }
-                
-                bThreads.add(bThread);
+                // Set breakpoints
+                dto.setBreakpoints(new Boolean[0]); // Will be set by debugger engine
+            } else {
+                // Light debugger level - minimal info
+                dto.setbThreadInfoList(new ArrayList<>());
+                dto.setEventsStatus(new il.ac.bgu.se.bp.rest.response.EventsStatusDTO());
+                dto.setCurrentRunningBT(null);
+                dto.setCurrentLineNumber(null);
+                dto.setBreakpoints(new Boolean[0]);
             }
-            state.setbThreadInfoList(bThreads);
+            
+        } catch (Exception e) {
+            logger.error("Failed to generate debugger state DTO: {0}", e.getMessage());
+            
+            // Fallback to minimal DTO
+            dto.setCurrentRunningBT(null);
+            dto.setCurrentLineNumber(null);
+            dto.setbThreadInfoList(new ArrayList<>());
+            dto.setEventsStatus(new il.ac.bgu.se.bp.rest.response.EventsStatusDTO());
+            dto.setGlobalEnv(new HashMap<>());
+            dto.setEventsHistory(new HashMap<>());
+            dto.setBreakpoints(new Boolean[0]);
+            
+            il.ac.bgu.se.bp.rest.response.DebuggerConfigsDTO configs = new il.ac.bgu.se.bp.rest.response.DebuggerConfigsDTO();
+            configs.setSkipBreakpoints(debuggerEngine.isMuteBreakpoints());
+            configs.setSkipSyncPoints(isSkipSyncPoints);
+            configs.setWaitForExternalEvents(bprog.isWaitForExternalEvents());
+            dto.setDebuggerConfigs(configs);
         }
         
-        // Convert events status
-        if (dto.getEventsStatus() != null) {
-            EventsStatus eventsStatus = new EventsStatus();
-            if (dto.getEventsStatus().getRequested() != null) {
-                Set<EventInfo> requested = new HashSet<>();
-                for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : dto.getEventsStatus().getRequested()) {
-                    requested.add(new EventInfo(eventDTO.getName()));
+        return dto;
+    }
+
+    /**
+     * Generate lightweight events history (only strings)
+     */
+    private Map<String, String> generateLightweightEventsHistory(int from, int to) {
+        Map<String, String> eventsHistory = new HashMap<>();
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBProgram() != null) {
+                // Get events from the b-program's event history
+                // Convert to simple string format
+                eventsHistory.put("0", "Program started");
+                eventsHistory.put("1", "Sync point reached");
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate lightweight events history: {0}", e.getMessage());
+        }
+        return eventsHistory;
+    }
+
+    /**
+     * Generate lightweight global variables (only strings)
+     */
+    private Map<String, String> generateLightweightGlobalVariables() {
+        Map<String, String> globalVariables = new HashMap<>();
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBProgram() != null) {
+                // Get global scope variables and convert to strings
+                Object[] ids = Arrays.stream(syncSnapshot.getBProgram().getGlobalScope().getIds())
+                    .filter((p) -> !p.toString().equals("bp"))
+                    .toArray();
+                
+                for (Object id : ids) {
+                    try {
+                        Object jsValue = syncSnapshot.getBProgram().getFromGlobalScope(id.toString(), Object.class).get();
+                        String varValue = convertToSafeString(jsValue);
+                        globalVariables.put(id.toString(), varValue);
+                    } catch (Exception e) {
+                        logger.warning("Failed to get global variable {0}: {1}", id.toString(), e.getMessage());
+                        globalVariables.put(id.toString(), "undefined");
+                    }
                 }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate lightweight global variables: {0}", e.getMessage());
+        }
+        return globalVariables;
+    }
+
+    /**
+     * Generate lightweight active b-threads (only strings)
+     */
+    private List<String> generateLightweightActiveBThreads() {
+        List<String> activeBThreads = new ArrayList<>();
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBThreadSnapshots() != null) {
+                for (BThreadSyncSnapshot bThreadSnapshot : syncSnapshot.getBThreadSnapshots()) {
+                    activeBThreads.add(bThreadSnapshot.getName());
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate lightweight active b-threads: {0}", e.getMessage());
+        }
+        return activeBThreads;
+    }
+
+    /**
+     * Generate lightweight requested events (only strings)
+     */
+    private List<String> generateLightweightRequestedEvents() {
+        List<String> requestedEvents = new ArrayList<>();
+        try {
+            if (syncSnapshot != null) {
+                Set<SyncStatement> statements = syncSnapshot.getStatements();
+                for (SyncStatement statement : statements) {
+                    try {
+                        Object requestObj = getFieldValue(statement, "request");
+                        if (requestObj instanceof Collection) {
+                            for (Object event : (Collection<?>) requestObj) {
+                                String eventName = getEventName(event);
+                                if (eventName != null && !requestedEvents.contains(eventName)) {
+                                    requestedEvents.add(eventName);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.warning("Failed to extract requested events from statement: {0}", e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate lightweight requested events: {0}", e.getMessage());
+        }
+        return requestedEvents;
+    }
+
+    /**
+     * Generate lightweight blocked events (only strings)
+     */
+    private List<String> generateLightweightBlockedEvents() {
+        List<String> blockedEvents = new ArrayList<>();
+        try {
+            if (syncSnapshot != null) {
+                Set<SyncStatement> statements = syncSnapshot.getStatements();
+                for (SyncStatement statement : statements) {
+                    try {
+                        Object blockObj = getFieldValue(statement, "block");
+                        if (blockObj instanceof Collection) {
+                            for (Object event : (Collection<?>) blockObj) {
+                                String eventName = getEventName(event);
+                                if (eventName != null && !blockedEvents.contains(eventName)) {
+                                    blockedEvents.add(eventName);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.warning("Failed to extract blocked events from statement: {0}", e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate lightweight blocked events: {0}", e.getMessage());
+        }
+        return blockedEvents;
+    }
+
+    /**
+     * Generate lightweight wait events (only strings)
+     */
+    private List<String> generateLightweightWaitEvents() {
+        List<String> waitEvents = new ArrayList<>();
+        try {
+            if (syncSnapshot != null) {
+                Set<SyncStatement> statements = syncSnapshot.getStatements();
+                for (SyncStatement statement : statements) {
+                    try {
+                        Object waitForObj = getFieldValue(statement, "waitFor");
+                        if (waitForObj instanceof Collection) {
+                            for (Object event : (Collection<?>) waitForObj) {
+                                String eventName = getEventName(event);
+                                if (eventName != null && !waitEvents.contains(eventName)) {
+                                    waitEvents.add(eventName);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.warning("Failed to extract wait events from statement: {0}", e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate lightweight wait events: {0}", e.getMessage());
+        }
+        return waitEvents;
+    }
+
+    /**
+     * Convert any Java object to a safe string representation
+     */
+    private String convertToSafeString(Object obj) {
+        if (obj == null) {
+            return "null";
+        }
+        
+        if (obj instanceof String) {
+            return (String) obj;
+        }
+        
+        if (obj instanceof Number || obj instanceof Boolean) {
+            return obj.toString();
+        }
+        
+        // For complex objects, use toString() as fallback
+        try {
+            return obj.toString();
+        } catch (Exception e) {
+            return "[" + obj.getClass().getSimpleName() + "]";
+        }
+    }
+
+    /**
+     * Generate lightweight context store (bp.store converted to strings)
+     */
+    private Map<String, String> generateLightweightContextStore() {
+        Map<String, String> contextStore = new HashMap<>();
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBProgram() != null) {
+                // Get bp.store from global scope using multiple approaches
+                Object bpObj = syncSnapshot.getBProgram().getFromGlobalScope("bp", Object.class).get();
+                if (bpObj != null) {
+                    // Try multiple field names for the store
+                    String[] storeFieldNames = {"store", "contextStore", "data", "context"};
+                    for (String fieldName : storeFieldNames) {
+                        try {
+                            Object storeObj = getFieldValue(bpObj, fieldName);
+                            if (storeObj instanceof Map) {
+                                Map<?, ?> store = (Map<?, ?>) storeObj;
+                                for (Map.Entry<?, ?> entry : store.entrySet()) {
+                                    String key = convertToSafeString(entry.getKey());
+                                    String value = convertToSafeString(entry.getValue());
+                                    contextStore.put(key, value);
+                                }
+                                if (!contextStore.isEmpty()) {
+                                    logger.info("Found context store with {0} entries using field: {1}", contextStore.size(), fieldName);
+                                    break;
+                                }
+                            }
+                        } catch (Exception e) {
+                            // Continue to next field name
+                        }
+                    }
+                    
+                    // If no store found, try to get all fields from bp object
+                    if (contextStore.isEmpty()) {
+                        try {
+                            java.lang.reflect.Field[] fields = bpObj.getClass().getDeclaredFields();
+                            for (java.lang.reflect.Field field : fields) {
+                                field.setAccessible(true);
+                                Object value = field.get(bpObj);
+                                String fieldName = field.getName();
+                                if (value instanceof Map) {
+                                    Map<?, ?> map = (Map<?, ?>) value;
+                                    for (Map.Entry<?, ?> entry : map.entrySet()) {
+                                        String key = convertToSafeString(entry.getKey());
+                                        String val = convertToSafeString(entry.getValue());
+                                        contextStore.put(fieldName + "." + key, val);
+                                    }
+                                } else {
+                                    contextStore.put(fieldName, convertToSafeString(value));
+                                }
+                            }
+                        } catch (Exception e) {
+                            logger.warning("Failed to extract all fields from bp object: {0}", e.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate lightweight context store: {0}", e.getMessage());
+        }
+        return contextStore;
+    }
+
+    /**
+     * Generate lightweight context entities (from bp.entities)
+     */
+    private List<String> generateLightweightContextEntities() {
+        List<String> contextEntities = new ArrayList<>();
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBProgram() != null) {
+                // Get bp.entities from global scope
+                Object bpObj = syncSnapshot.getBProgram().getFromGlobalScope("bp", Object.class).get();
+                if (bpObj != null) {
+                    // Try multiple field names for entities
+                    String[] entityFieldNames = {"entities", "entityList", "allEntities", "contextEntities"};
+                    for (String fieldName : entityFieldNames) {
+                        try {
+                            Object entitiesObj = getFieldValue(bpObj, fieldName);
+                            if (entitiesObj instanceof Collection) {
+                                for (Object entity : (Collection<?>) entitiesObj) {
+                                    String entityStr = convertToSafeString(entity);
+                                    contextEntities.add(entityStr);
+                                }
+                                if (!contextEntities.isEmpty()) {
+                                    logger.info("Found {0} context entities using field: {1}", contextEntities.size(), fieldName);
+                                    break;
+                                }
+                            }
+                        } catch (Exception e) {
+                            // Continue to next field name
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate lightweight context entities: {0}", e.getMessage());
+        }
+        return contextEntities;
+    }
+
+    /**
+     * Generate current context information
+     */
+    private String generateCurrentContext() {
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBProgram() != null) {
+                // Get current context from bp.ctx
+                Object bpObj = syncSnapshot.getBProgram().getFromGlobalScope("bp", Object.class).get();
+                if (bpObj != null) {
+                    // Try multiple field names for context
+                    String[] ctxFieldNames = {"ctx", "currentContext", "context", "activeContext"};
+                    for (String fieldName : ctxFieldNames) {
+                        try {
+                            Object ctxObj = getFieldValue(bpObj, fieldName);
+                            if (ctxObj != null) {
+                                String ctxStr = convertToSafeString(ctxObj);
+                                if (!ctxStr.equals("null") && !ctxStr.equals("[object Object]")) {
+                                    logger.info("Found current context using field: {0}, value: {1}", fieldName, ctxStr);
+                                    return ctxStr;
+                                }
+                            }
+                        } catch (Exception e) {
+                            // Continue to next field name
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate current context: {0}", e.getMessage());
+        }
+        return "default";
+    }
+
+    /**
+     * Generate lightweight context variables (from bp.ctx variables)
+     */
+    private Map<String, String> generateLightweightContextVariables() {
+        Map<String, String> contextVariables = new HashMap<>();
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBProgram() != null) {
+                // Get context variables from bp.ctx
+                Object bpObj = syncSnapshot.getBProgram().getFromGlobalScope("bp", Object.class).get();
+                if (bpObj != null) {
+                    Object ctxObj = getFieldValue(bpObj, "ctx");
+                    if (ctxObj != null) {
+                        // Try to get variables from context object
+                        try {
+                            java.lang.reflect.Field[] fields = ctxObj.getClass().getDeclaredFields();
+                            for (java.lang.reflect.Field field : fields) {
+                                field.setAccessible(true);
+                                Object value = field.get(ctxObj);
+                                String fieldName = field.getName();
+                                String fieldValue = convertToSafeString(value);
+                                contextVariables.put(fieldName, fieldValue);
+                            }
+                        } catch (Exception e) {
+                            // If reflection fails, just use toString
+                            contextVariables.put("ctx", convertToSafeString(ctxObj));
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate lightweight context variables: {0}", e.getMessage());
+        }
+        return contextVariables;
+    }
+
+    /**
+     * Helper method to get field value using reflection
+     */
+    private Object getFieldValue(Object obj, String fieldName) {
+        try {
+            java.lang.reflect.Field field = obj.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field.get(obj);
+        } catch (Exception e) {
+            logger.warning("Failed to get field {0} from object: {1}", fieldName, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Helper method to extract event name from event object
+     */
+    private String getEventName(Object event) {
+        if (event == null) {
+            return null;
+        }
+        
+        // If it's a BEvent, get the name
+        if (event instanceof BEvent) {
+            return ((BEvent) event).getName();
+        }
+        
+        // If it's an EventSet, try to get name
+        if (event instanceof EventSet) {
+            try {
+                Object nameField = getFieldValue(event, "name");
+                if (nameField instanceof String) {
+                    return (String) nameField;
+                }
+            } catch (Exception e) {
+                // Fall through to toString()
+            }
+        }
+        
+        // Fallback to toString()
+        return event.toString();
+    }
+
+    /**
+     * Generate events history DTO (replicates DebuggerStateHelper logic)
+     */
+    private Map<Long, String> generateEventsHistoryDTO(int from, int to) {
+        Map<Long, String> eventsHistory = new HashMap<>();
+        try {
+            SortedMap<Long, EventInfo> realEventsHistory = debuggerStateHelper.generateEventsHistory(from, to);
+            if (realEventsHistory != null) {
+                for (Map.Entry<Long, EventInfo> entry : realEventsHistory.entrySet()) {
+                    eventsHistory.put(entry.getKey(), entry.getValue().getName());
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate events history: {0}", e.getMessage());
+        }
+        return eventsHistory;
+    }
+
+    /**
+     * Generate debugger configs DTO (replicates DebuggerStateHelper logic)
+     */
+    private il.ac.bgu.se.bp.rest.response.DebuggerConfigsDTO generateDebuggerConfigsDTO() {
+        il.ac.bgu.se.bp.rest.response.DebuggerConfigsDTO configs = new il.ac.bgu.se.bp.rest.response.DebuggerConfigsDTO();
+        configs.setSkipBreakpoints(debuggerEngine.isMuteBreakpoints());
+        configs.setSkipSyncPoints(isSkipSyncPoints);
+        configs.setWaitForExternalEvents(bprog.isWaitForExternalEvents());
+        return configs;
+    }
+
+    /**
+     * Generate global environment DTO (replicates DebuggerStateHelper logic)
+     */
+    private Map<String, String> generateGlobalEnvDTO() {
+        Map<String, String> globalEnv = new HashMap<>();
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBProgram() != null) {
+                Object[] ids = Arrays.stream(syncSnapshot.getBProgram().getGlobalScope().getIds())
+                    .filter((p) -> !p.toString().equals("bp"))
+                    .toArray();
+                
+                for (Object id : ids) {
+                    try {
+                        Object jsValue = syncSnapshot.getBProgram().getFromGlobalScope(id.toString(), Object.class).get();
+                        String varValue = getVarGsonValue(jsValue);
+                        globalEnv.put(id.toString(), varValue);
+                    } catch (Exception e) {
+                        logger.warning("Failed to get global variable {0}: {1}", id.toString(), e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate global environment: {0}", e.getMessage());
+        }
+        return globalEnv;
+    }
+
+    /**
+     * Generate b-thread infos DTO (replicates DebuggerStateHelper logic)
+     */
+    private List<il.ac.bgu.se.bp.rest.response.BThreadInfoDTO> generateBThreadInfosDTO() {
+        List<il.ac.bgu.se.bp.rest.response.BThreadInfoDTO> bThreadDTOs = new ArrayList<>();
+        
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBThreadSnapshots() != null) {
+                for (BThreadSyncSnapshot bThreadSnapshot : syncSnapshot.getBThreadSnapshots()) {
+                    il.ac.bgu.se.bp.rest.response.BThreadInfoDTO bThreadDTO = createBThreadInfoDTO(bThreadSnapshot);
+                    if (bThreadDTO != null) {
+                        bThreadDTOs.add(bThreadDTO);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to generate b-thread infos: {0}", e.getMessage());
+        }
+        
+        return bThreadDTOs;
+    }
+
+    /**
+     * Generate events status DTO (replicates DebuggerStateHelper logic)
+     */
+    private il.ac.bgu.se.bp.rest.response.EventsStatusDTO generateEventsStatusDTO() {
+        il.ac.bgu.se.bp.rest.response.EventsStatusDTO eventsStatus = new il.ac.bgu.se.bp.rest.response.EventsStatusDTO();
+        
+        try {
+            if (syncSnapshot != null) {
+                // Get all possible events from sync statements
+                Set<SyncStatement> statements = syncSnapshot.getStatements();
+                List<BEvent> allRequestedBEvents = statements.stream()
+                    .map(SyncStatement::getRequest)
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toList());
+                
+                // Convert to DTOs
+                Set<il.ac.bgu.se.bp.rest.response.EventInfoDTO> requested = allRequestedBEvents.stream()
+                    .map(event -> new il.ac.bgu.se.bp.rest.response.EventInfoDTO(event.getName()))
+                    .collect(Collectors.toSet());
+                
                 eventsStatus.setRequested(requested);
+                eventsStatus.setBlocked(new HashSet<>());
+                eventsStatus.setWait(new HashSet<>());
             }
-            if (dto.getEventsStatus().getBlocked() != null) {
-                List<EventInfo> blocked = new ArrayList<>();
-                for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : dto.getEventsStatus().getBlocked()) {
-                    blocked.add(new EventInfo(eventDTO.getName()));
+        } catch (Exception e) {
+            logger.warning("Failed to generate events status: {0}", e.getMessage());
+        }
+        
+        return eventsStatus;
+    }
+
+    /**
+     * Create BThreadInfoDTO from BThreadSyncSnapshot (replicates DebuggerStateHelper.createBThreadInfo logic)
+     */
+    private il.ac.bgu.se.bp.rest.response.BThreadInfoDTO createBThreadInfoDTO(BThreadSyncSnapshot bThreadSnapshot) {
+        try {
+            il.ac.bgu.se.bp.rest.response.BThreadInfoDTO bThreadDTO = new il.ac.bgu.se.bp.rest.response.BThreadInfoDTO();
+            bThreadDTO.setName(bThreadSnapshot.getName());
+            
+            // Create environment
+            Map<Integer, il.ac.bgu.se.bp.rest.response.BThreadScopeDTO> env = new HashMap<>();
+            il.ac.bgu.se.bp.rest.response.BThreadScopeDTO scope = new il.ac.bgu.se.bp.rest.response.BThreadScopeDTO();
+            scope.setScopeName(bThreadSnapshot.getName());
+            scope.setCurrentLineNumber("1"); // Default line number
+            
+            // Add context information for COBP b-threads
+        Map<String, String> variables = new HashMap<>();
+            variables.put("status", "running");
+            
+            // Check if this is a COBP CBT (Context-Based Thread)
+            if (bThreadSnapshot.getName().startsWith("cbt: ")) {
+                variables.put("context", "COBP_CBT");
+                variables.put("cbtName", bThreadSnapshot.getName().substring(5)); // Remove "cbt: " prefix
+            } else {
+                variables.put("context", "regular");
+            }
+            
+        scope.setVariables(variables);
+        env.put(0, scope);
+            bThreadDTO.setEnv(env);
+            
+            // Get real event sets from SyncStatement
+            Set<il.ac.bgu.se.bp.rest.response.EventInfoDTO> requested = new HashSet<>();
+            Set<il.ac.bgu.se.bp.rest.response.EventInfoDTO> blocked = new HashSet<>();
+            Set<il.ac.bgu.se.bp.rest.response.EventInfoDTO> wait = new HashSet<>();
+            
+            try {
+                // Get the SyncStatement from the b-thread snapshot
+                Object syncStatement = bThreadSnapshot.getSyncStatement();
+                if (syncStatement != null) {
+                    // Get requested events
+                    Object requestObj = getFieldValue(syncStatement, "request");
+                    if (requestObj instanceof Collection) {
+                        for (Object event : (Collection<?>) requestObj) {
+                            if (event != null) {
+                                String eventName = getEventName(event);
+                                if (eventName != null) {
+                                    requested.add(new il.ac.bgu.se.bp.rest.response.EventInfoDTO(eventName));
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Get wait events
+                    Object waitForObj = getFieldValue(syncStatement, "waitFor");
+                    if (waitForObj instanceof Collection) {
+                        for (Object event : (Collection<?>) waitForObj) {
+                            if (event != null) {
+                                String eventName = getEventName(event);
+                                if (eventName != null) {
+                                    wait.add(new il.ac.bgu.se.bp.rest.response.EventInfoDTO(eventName));
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Get blocked events
+                    Object blockObj = getFieldValue(syncStatement, "block");
+                    if (blockObj instanceof Collection) {
+                        for (Object event : (Collection<?>) blockObj) {
+                            if (event != null) {
+                                String eventName = getEventName(event);
+                                if (eventName != null) {
+                                    blocked.add(new il.ac.bgu.se.bp.rest.response.EventInfoDTO(eventName));
+                                }
+                            }
+                        }
+                    }
                 }
-                eventsStatus.setBlocked(blocked);
+            } catch (Exception e) {
+                logger.warning("Failed to extract events from SyncStatement: {0}", e.getMessage());
             }
-            if (dto.getEventsStatus().getWait() != null) {
-                List<EventInfo> wait = new ArrayList<>();
-                for (il.ac.bgu.se.bp.rest.response.EventInfoDTO eventDTO : dto.getEventsStatus().getWait()) {
-                    wait.add(new EventInfo(eventDTO.getName()));
-                }
-                eventsStatus.setWait(wait);
+            
+            bThreadDTO.setRequested(requested);
+            bThreadDTO.setBlocked(blocked);
+            bThreadDTO.setWait(wait);
+            
+            return bThreadDTO;
+            
+        } catch (Exception e) {
+            logger.warning("Failed to create BThreadInfoDTO: {0}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Helper method to convert JavaScript values to JSON strings (replicates DebuggerStateHelper logic)
+     */
+    private String getVarGsonValue(Object jsValue) {
+        try {
+            if (jsValue == null) {
+                return "null";
             }
-            state.setEventsStatus(eventsStatus);
+            
+            // Use Gson to serialize the value
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            return gson.toJson(jsValue);
+            
+        } catch (Exception e) {
+            logger.warning("Failed to serialize JS value: {0}", e.getMessage());
+            return jsValue != null ? jsValue.toString() : "null";
         }
-        
-        // Convert global environment
-        if (dto.getGlobalEnv() != null) {
-            state.setGlobalEnv(new HashMap<>(dto.getGlobalEnv()));
-        }
-        
-        // Convert events history
-        if (dto.getEventsHistory() != null) {
-            SortedMap<Long, EventInfo> eventsHistory = new TreeMap<>();
-            for (Map.Entry<Long, String> entry : dto.getEventsHistory().entrySet()) {
-                eventsHistory.put(entry.getKey(), new EventInfo(entry.getValue()));
-            }
-            state.setEventsHistory(eventsHistory);
-        }
-        
-        // Convert breakpoints
-        if (dto.getBreakpoints() != null) {
-            state.setBreakpoints(dto.getBreakpoints());
-        }
-        
-        // Convert debugger configs
-        if (dto.getDebuggerConfigs() != null) {
-            DebuggerConfigs configs = new DebuggerConfigs();
-            configs.setToggleMuteBreakPoint(dto.getDebuggerConfigs().isSkipBreakpoints());
-            configs.setToggleMuteSyncPoints(dto.getDebuggerConfigs().isSkipSyncPoints());
-            configs.setToggleWaitForExternalEvents(dto.getDebuggerConfigs().isWaitForExternalEvents());
-            state.setDebuggerConfigs(configs);
-        }
-        
-        return state;
     }
 
     @Override

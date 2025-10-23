@@ -1173,21 +1173,33 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
                 // Get context variables from bp.ctx
                 Object bpObj = syncSnapshot.getBProgram().getFromGlobalScope("bp", Object.class).get();
                 if (bpObj != null) {
-                    Object ctxObj = getFieldValue(bpObj, "ctx");
-                    if (ctxObj != null) {
-                        // Try to get variables from context object
+                    // Try multiple field names for context
+                    String[] ctxFieldNames = {"ctx", "currentContext", "context", "activeContext"};
+                    for (String fieldName : ctxFieldNames) {
                         try {
-                            java.lang.reflect.Field[] fields = ctxObj.getClass().getDeclaredFields();
-                            for (java.lang.reflect.Field field : fields) {
-                                field.setAccessible(true);
-                                Object value = field.get(ctxObj);
-                                String fieldName = field.getName();
-                                String fieldValue = convertToSafeString(value);
-                                contextVariables.put(fieldName, fieldValue);
+                            Object ctxObj = getFieldValue(bpObj, fieldName);
+                            if (ctxObj != null) {
+                                // Try to get variables from context object
+                                try {
+                                    java.lang.reflect.Field[] fields = ctxObj.getClass().getDeclaredFields();
+                                    for (java.lang.reflect.Field field : fields) {
+                                        field.setAccessible(true);
+                                        Object value = field.get(ctxObj);
+                                        String fieldName2 = field.getName();
+                                        String fieldValue = convertToSafeString(value);
+                                        contextVariables.put(fieldName + "." + fieldName2, fieldValue);
+                                    }
+                                    if (!contextVariables.isEmpty()) {
+                                        logger.info("Found {0} context variables using field: {1}", contextVariables.size(), fieldName);
+                                        break;
+                                    }
+                                } catch (Exception e) {
+                                    // If reflection fails, just use toString
+                                    contextVariables.put(fieldName, convertToSafeString(ctxObj));
+                                }
                             }
                         } catch (Exception e) {
-                            // If reflection fails, just use toString
-                            contextVariables.put("ctx", convertToSafeString(ctxObj));
+                            // Continue to next field name
                         }
                     }
                 }

@@ -27,8 +27,6 @@ import il.ac.bgu.se.bp.rest.response.SyncSnapshot;
 import il.ac.bgu.se.bp.socket.console.ConsoleMessage;
 import il.ac.bgu.se.bp.socket.console.LogType;
 import il.ac.bgu.se.bp.socket.state.BPDebuggerState;
-import il.ac.bgu.se.bp.socket.state.BThreadInfo;
-import il.ac.bgu.se.bp.socket.state.BThreadScope;
 import il.ac.bgu.se.bp.socket.state.EventInfo;
 import il.ac.bgu.se.bp.socket.status.Status;
 import il.ac.bgu.se.bp.utils.DebuggerBProgramRunnerListener;
@@ -498,70 +496,53 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
 
     // New methods that return StepResponse with debugger state
     public StepResponse stepIntoWithState() {
-        // Create a minimal debugger state to avoid Gson serialization issues
-        BPDebuggerState debuggerState = createMinimalDebuggerState();
+        // For COBP, we need to validate SYNC_STATE instead of JS_DEBUG
+        if (!checkStateEquals(RunnerState.State.SYNC_STATE)) {
+            return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
+        }
+        
+        // Generate actual debugger state from current sync snapshot
+        BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+            syncSnapshot, state, null, null);
         return new StepResponse(true, null, debuggerState);
     }
 
     public StepResponse stepOverWithState() {
-        // Create a minimal debugger state to avoid Gson serialization issues
-        BPDebuggerState debuggerState = createMinimalDebuggerState();
+        // For COBP, we need to validate SYNC_STATE instead of JS_DEBUG
+        if (!checkStateEquals(RunnerState.State.SYNC_STATE)) {
+            return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
+        }
+        
+        // Generate actual debugger state from current sync snapshot
+        BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+            syncSnapshot, state, null, null);
         return new StepResponse(true, null, debuggerState);
     }
 
     public StepResponse stepOutWithState() {
-        // Create a minimal debugger state to avoid Gson serialization issues
-        BPDebuggerState debuggerState = createMinimalDebuggerState();
+        // For COBP, we need to validate SYNC_STATE instead of JS_DEBUG
+        if (!checkStateEquals(RunnerState.State.SYNC_STATE)) {
+            return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
+        }
+        
+        // Generate actual debugger state from current sync snapshot
+        BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+            syncSnapshot, state, null, null);
         return new StepResponse(true, null, debuggerState);
     }
 
     public StepResponse nextSyncWithState() {
-        // Create a minimal debugger state to avoid Gson serialization issues
-        BPDebuggerState debuggerState = createMinimalDebuggerState();
+        // For COBP, we need to validate SYNC_STATE instead of JS_DEBUG
+        if (!checkStateEquals(RunnerState.State.SYNC_STATE)) {
+            return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
+        }
+        
+        // Generate actual debugger state from current sync snapshot
+        BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+            syncSnapshot, state, null, null);
         return new StepResponse(true, null, debuggerState);
     }
 
-    private BPDebuggerState createMinimalDebuggerState() {
-        // Create a minimal debugger state with basic information
-        BPDebuggerState state = new BPDebuggerState();
-        
-        // Add some basic b-thread information
-        List<BThreadInfo> bThreads = new ArrayList<>();
-        
-        // Create EventInfo objects for the events
-        Set<EventInfo> requestedEvents = new HashSet<>();
-        requestedEvents.add(new EventInfo("think"));
-        requestedEvents.add(new EventInfo("pickUpFork"));
-        
-        Set<EventInfo> blockedEvents = new HashSet<>();
-        blockedEvents.add(new EventInfo("startEating"));
-        
-        Set<EventInfo> waitEvents = new HashSet<>();
-        waitEvents.add(new EventInfo("stopEating"));
-        
-        // Create environment map with scope information
-        Map<Integer, BThreadScope> env = new HashMap<>();
-        BThreadScope scope = new BThreadScope();
-        scope.setScopeName("philosopherBehavior");
-        scope.setCurrentLineNumber("15");
-        
-        // Add context information to variables so it shows up in JSON
-        Map<String, String> variables = new HashMap<>();
-        variables.put("philosopher", "thinking");
-        variables.put("context", "allPhilosophers"); // This is the COBP context field
-        scope.setVariables(variables);
-        env.put(0, scope);
-        
-        // Create a simple b-thread info for demonstration
-        BThreadInfo bThreadInfo = new BThreadInfo("cobp: philosopherBehavior", env, waitEvents, blockedEvents, requestedEvents);
-        bThreads.add(bThreadInfo);
-        
-        state.setbThreadInfoList(bThreads);
-        state.setCurrentRunningBT("cobp: philosopherBehavior");
-        state.setCurrentLineNumber(15);
-        
-        return state;
-    }
 
     @Override
     public BooleanResponse setBreakpoint(final int lineNumber, final boolean stopOnBreakpoint) {

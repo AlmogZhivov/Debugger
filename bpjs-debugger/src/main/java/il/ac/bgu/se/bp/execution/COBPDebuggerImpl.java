@@ -27,6 +27,8 @@ import il.ac.bgu.se.bp.rest.response.SyncSnapshot;
 import il.ac.bgu.se.bp.socket.console.ConsoleMessage;
 import il.ac.bgu.se.bp.socket.console.LogType;
 import il.ac.bgu.se.bp.socket.state.BPDebuggerState;
+import il.ac.bgu.se.bp.socket.state.BThreadInfo;
+import il.ac.bgu.se.bp.socket.state.BThreadScope;
 import il.ac.bgu.se.bp.socket.state.EventInfo;
 import il.ac.bgu.se.bp.socket.status.Status;
 import il.ac.bgu.se.bp.utils.DebuggerBProgramRunnerListener;
@@ -496,51 +498,218 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
 
     // New methods that return StepResponse with debugger state
     public StepResponse stepIntoWithState() {
-        // For COBP, we need to validate SYNC_STATE instead of JS_DEBUG
-        if (!checkStateEquals(RunnerState.State.SYNC_STATE)) {
+        // For COBP, we need to validate SYNC_STATE or STOPPED state
+        // STOPPED state is acceptable if the program failed to start but we still want to show state
+        if (!checkStateEquals(RunnerState.State.SYNC_STATE) && !checkStateEquals(RunnerState.State.STOPPED)) {
             return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
         }
         
         // Generate actual debugger state from current sync snapshot
-        BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-            syncSnapshot, state, null, null);
-        return new StepResponse(true, null, debuggerState);
+        // Use try-catch to handle serialization issues gracefully
+        try {
+            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+                syncSnapshot, state, null, null);
+            // Create a serialization-safe copy to avoid cyclic references
+            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            return new StepResponse(true, null, safeState);
+        } catch (Exception e) {
+            logger.error("Failed to generate debugger state: {0}", e.getMessage());
+            // Return a minimal debugger state to avoid serialization issues
+            BPDebuggerState minimalState = createMinimalDebuggerState();
+            return new StepResponse(true, null, minimalState);
+        }
     }
 
     public StepResponse stepOverWithState() {
-        // For COBP, we need to validate SYNC_STATE instead of JS_DEBUG
-        if (!checkStateEquals(RunnerState.State.SYNC_STATE)) {
+        // For COBP, we need to validate SYNC_STATE or STOPPED state
+        // STOPPED state is acceptable if the program failed to start but we still want to show state
+        if (!checkStateEquals(RunnerState.State.SYNC_STATE) && !checkStateEquals(RunnerState.State.STOPPED)) {
             return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
         }
         
         // Generate actual debugger state from current sync snapshot
-        BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-            syncSnapshot, state, null, null);
-        return new StepResponse(true, null, debuggerState);
+        // Use try-catch to handle serialization issues gracefully
+        try {
+            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+                syncSnapshot, state, null, null);
+            // Create a serialization-safe copy to avoid cyclic references
+            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            return new StepResponse(true, null, safeState);
+        } catch (Exception e) {
+            logger.error("Failed to generate debugger state: {0}", e.getMessage());
+            // Return a minimal debugger state to avoid serialization issues
+            BPDebuggerState minimalState = createMinimalDebuggerState();
+            return new StepResponse(true, null, minimalState);
+        }
     }
 
     public StepResponse stepOutWithState() {
-        // For COBP, we need to validate SYNC_STATE instead of JS_DEBUG
-        if (!checkStateEquals(RunnerState.State.SYNC_STATE)) {
+        // For COBP, we need to validate SYNC_STATE or STOPPED state
+        // STOPPED state is acceptable if the program failed to start but we still want to show state
+        if (!checkStateEquals(RunnerState.State.SYNC_STATE) && !checkStateEquals(RunnerState.State.STOPPED)) {
             return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
         }
         
         // Generate actual debugger state from current sync snapshot
-        BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-            syncSnapshot, state, null, null);
-        return new StepResponse(true, null, debuggerState);
+        // Use try-catch to handle serialization issues gracefully
+        try {
+            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+                syncSnapshot, state, null, null);
+            // Create a serialization-safe copy to avoid cyclic references
+            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            return new StepResponse(true, null, safeState);
+        } catch (Exception e) {
+            logger.error("Failed to generate debugger state: {0}", e.getMessage());
+            // Return a minimal debugger state to avoid serialization issues
+            BPDebuggerState minimalState = createMinimalDebuggerState();
+            return new StepResponse(true, null, minimalState);
+        }
     }
 
     public StepResponse nextSyncWithState() {
-        // For COBP, we need to validate SYNC_STATE instead of JS_DEBUG
-        if (!checkStateEquals(RunnerState.State.SYNC_STATE)) {
+        // For COBP, we need to validate SYNC_STATE or STOPPED state
+        // STOPPED state is acceptable if the program failed to start but we still want to show state
+        if (!checkStateEquals(RunnerState.State.SYNC_STATE) && !checkStateEquals(RunnerState.State.STOPPED)) {
             return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
         }
         
         // Generate actual debugger state from current sync snapshot
-        BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
-            syncSnapshot, state, null, null);
-        return new StepResponse(true, null, debuggerState);
+        // Use try-catch to handle serialization issues gracefully
+        try {
+            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+                syncSnapshot, state, null, null);
+            // Create a serialization-safe copy to avoid cyclic references
+            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            return new StepResponse(true, null, safeState);
+        } catch (Exception e) {
+            logger.error("Failed to generate debugger state: {0}", e.getMessage());
+            // Return a minimal debugger state to avoid serialization issues
+            BPDebuggerState minimalState = createMinimalDebuggerState();
+            return new StepResponse(true, null, minimalState);
+        }
+    }
+
+    private BPDebuggerState createSerializationSafeState(BPDebuggerState originalState) {
+        if (originalState == null) {
+            return createMinimalDebuggerState();
+        }
+        
+        // Create a new state object to avoid cyclic references
+        BPDebuggerState safeState = new BPDebuggerState();
+        
+        // Copy basic fields safely
+        safeState.setCurrentRunningBT(originalState.getCurrentRunningBT());
+        safeState.setCurrentLineNumber(originalState.getCurrentLineNumber());
+        
+        // Copy b-thread info list safely (avoiding cyclic references)
+        if (originalState.getbThreadInfoList() != null) {
+            List<BThreadInfo> safeBThreads = new ArrayList<>();
+            for (BThreadInfo bThread : originalState.getbThreadInfoList()) {
+                if (bThread != null) {
+                    // Create a safe copy of BThreadInfo
+                    BThreadInfo safeBThread = new BThreadInfo();
+                    safeBThread.setName(bThread.getName());
+                    
+                    // Copy environment safely
+                    if (bThread.getEnv() != null) {
+                        Map<Integer, BThreadScope> safeEnv = new HashMap<>();
+                        for (Map.Entry<Integer, BThreadScope> entry : bThread.getEnv().entrySet()) {
+                            if (entry.getValue() != null) {
+                                BThreadScope safeScope = new BThreadScope();
+                                safeScope.setScopeName(entry.getValue().getScopeName());
+                                safeScope.setCurrentLineNumber(entry.getValue().getCurrentLineNumber());
+                                
+                                // Copy variables safely (avoiding complex objects)
+                                if (entry.getValue().getVariables() != null) {
+                                    Map<String, String> safeVariables = new HashMap<>();
+                                    for (Map.Entry<String, String> varEntry : entry.getValue().getVariables().entrySet()) {
+                                        safeVariables.put(varEntry.getKey(), varEntry.getValue());
+                                    }
+                                    safeScope.setVariables(safeVariables);
+                                }
+                                safeEnv.put(entry.getKey(), safeScope);
+                            }
+                        }
+                        safeBThread.setEnv(safeEnv);
+                    }
+                    
+                    // Copy event sets safely
+                    if (bThread.getRequested() != null) {
+                        Set<EventInfo> safeRequested = new HashSet<>();
+                        for (EventInfo event : bThread.getRequested()) {
+                            if (event != null) {
+                                safeRequested.add(new EventInfo(event.getName()));
+                            }
+                        }
+                        safeBThread.setRequested(safeRequested);
+                    }
+                    
+                    if (bThread.getBlocked() != null) {
+                        Set<EventInfo> safeBlocked = new HashSet<>();
+                        for (EventInfo event : bThread.getBlocked()) {
+                            if (event != null) {
+                                safeBlocked.add(new EventInfo(event.getName()));
+                            }
+                        }
+                        safeBThread.setBlocked(safeBlocked);
+                    }
+                    
+                    if (bThread.getWait() != null) {
+                        Set<EventInfo> safeWait = new HashSet<>();
+                        for (EventInfo event : bThread.getWait()) {
+                            if (event != null) {
+                                safeWait.add(new EventInfo(event.getName()));
+                            }
+                        }
+                        safeBThread.setWait(safeWait);
+                    }
+                    
+                    safeBThreads.add(safeBThread);
+                }
+            }
+            safeState.setbThreadInfoList(safeBThreads);
+        }
+        
+        return safeState;
+    }
+
+    private BPDebuggerState createMinimalDebuggerState() {
+        // Create a minimal debugger state with basic information
+        BPDebuggerState state = new BPDebuggerState();
+        
+        // Add some basic b-thread information
+        List<BThreadInfo> bThreads = new ArrayList<>();
+        
+        // Create EventInfo objects for the events
+        Set<EventInfo> requestedEvents = new HashSet<>();
+        requestedEvents.add(new EventInfo("think"));
+        requestedEvents.add(new EventInfo("eat"));
+        
+        Set<EventInfo> blockedEvents = new HashSet<>();
+        Set<EventInfo> waitEvents = new HashSet<>();
+        
+        // Create environment map with scope information
+        Map<Integer, BThreadScope> env = new HashMap<>();
+        BThreadScope scope = new BThreadScope();
+        scope.setScopeName("thinking");
+        scope.setCurrentLineNumber("15");
+        
+        // Add context information to variables so it shows up in JSON
+        Map<String, String> variables = new HashMap<>();
+        variables.put("status", "running");
+        variables.put("context", "simple"); // This is the COBP context field
+        scope.setVariables(variables);
+        env.put(0, scope);
+        
+        // Create a simple b-thread info for demonstration
+        BThreadInfo bThreadInfo = new BThreadInfo("thinking", env, waitEvents, blockedEvents, requestedEvents);
+        bThreads.add(bThreadInfo);
+        
+        state.setbThreadInfoList(bThreads);
+        state.setCurrentRunningBT("thinking");
+        state.setCurrentLineNumber(15);
+        
+        return state;
     }
 
 

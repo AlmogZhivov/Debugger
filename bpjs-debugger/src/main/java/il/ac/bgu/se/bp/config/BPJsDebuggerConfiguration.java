@@ -3,6 +3,7 @@ package il.ac.bgu.se.bp.config;
 import il.ac.bgu.se.bp.debugger.manage.DebuggerFactory;
 import il.ac.bgu.se.bp.debugger.manage.ProgramValidator;
 import il.ac.bgu.se.bp.execution.manage.DebuggerFactoryImpl;
+import il.ac.bgu.se.bp.execution.manage.COBPDebuggerFactoryImpl;
 import il.ac.bgu.se.bp.execution.manage.ProgramValidatorImpl;
 import il.ac.bgu.se.bp.mains.BPJsDebuggerCliRunner;
 import il.ac.bgu.se.bp.utils.asyncHelper.AsyncOperationRunner;
@@ -23,6 +24,11 @@ public class BPJsDebuggerConfiguration {
     @Bean
     public DebuggerFactory debuggerFactory() {
         return new DebuggerFactoryImpl();
+    }
+
+    @Bean("cobpDebuggerFactory")
+    public DebuggerFactory cobpDebuggerFactory() {
+        return new COBPDebuggerFactoryImpl();
     }
 
     @Bean

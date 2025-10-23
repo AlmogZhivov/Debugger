@@ -14,6 +14,7 @@ C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\mains\BPJsDebuggerCliRunner.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\debugger\engine\SyncSnapshotHolderImpl.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\debugger\commands\ToggleMuteBreakpoints.java
+C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\execution\manage\COBPDebuggerFactoryImpl.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\utils\ResponseHelper.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\debugger\engine\dim\DimHelper.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\utils\DebuggerStateHelper.java
@@ -25,4 +26,5 @@ C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\debugger\commands\StepOut.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\debugger\commands\GetState.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\utils\DebuggerPrintStream.java
+C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\execution\COBPDebuggerImpl.java
 C:\Users\User\IdeaProjects\Debugger\bpjs-debugger\src\main\java\il\ac\bgu\se\bp\utils\DebuggerExecutorServiceMaker.java

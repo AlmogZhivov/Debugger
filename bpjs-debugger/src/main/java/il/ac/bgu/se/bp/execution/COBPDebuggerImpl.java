@@ -954,16 +954,56 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         try {
             if (syncSnapshot != null) {
                 Set<SyncStatement> statements = syncSnapshot.getStatements();
+                logger.info("Found {0} sync statements to analyze for blocked events", statements.size());
                 for (SyncStatement statement : statements) {
                     try {
+                        // Debug: Print all available fields in the SyncStatement
+                        java.lang.reflect.Field[] fields = statement.getClass().getDeclaredFields();
+                        logger.info("SyncStatement fields: {0}", java.util.Arrays.stream(fields).map(f -> f.getName()).collect(java.util.stream.Collectors.toList()));
+                        
                         Object blockObj = getFieldValue(statement, "block");
+                        logger.info("Block object from statement: {0}", blockObj);
+                        
+                        // Handle different types of block objects
                         if (blockObj instanceof Collection) {
-                            for (Object event : (Collection<?>) blockObj) {
+                            Collection<?> blockCollection = (Collection<?>) blockObj;
+                            logger.info("Found {0} blocked events in collection", blockCollection.size());
+                            for (Object event : blockCollection) {
                                 String eventName = getEventName(event);
+                                logger.info("Extracted blocked event name: {0}", eventName);
                                 if (eventName != null && !blockedEvents.contains(eventName)) {
                                     blockedEvents.add(eventName);
                                 }
                             }
+                        } else if (blockObj instanceof BEvent) {
+                            // Single BEvent object
+                            String eventName = getEventName(blockObj);
+                            logger.info("Extracted single blocked event name: {0}", eventName);
+                            if (eventName != null && !blockedEvents.contains(eventName)) {
+                                blockedEvents.add(eventName);
+                            }
+                        } else if (blockObj != null && !blockObj.toString().equals("{none}")) {
+                            // Handle AnyOf or other complex objects by extracting event names from toString()
+                            String blockStr = blockObj.toString();
+                            logger.info("Processing complex block object: {0}", blockStr);
+                            
+                            // Extract event names from AnyOf objects like "anyOf([BEvent name:eat],[BEvent name:think])"
+                            if (blockStr.contains("BEvent name:")) {
+                                String[] parts = blockStr.split("BEvent name:");
+                                for (int i = 1; i < parts.length; i++) {
+                                    String eventPart = parts[i];
+                                    int endIndex = eventPart.indexOf(']');
+                                    if (endIndex > 0) {
+                                        String eventName = eventPart.substring(0, endIndex);
+                                        logger.info("Extracted blocked event name from complex object: {0}", eventName);
+                                        if (!blockedEvents.contains(eventName)) {
+                                            blockedEvents.add(eventName);
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            logger.info("Block object is null or {none}, type: {0}", blockObj != null ? blockObj.getClass().getSimpleName() : "null");
                         }
                     } catch (Exception e) {
                         logger.warning("Failed to extract blocked events from statement: {0}", e.getMessage());
@@ -973,6 +1013,7 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         } catch (Exception e) {
             logger.warning("Failed to generate lightweight blocked events: {0}", e.getMessage());
         }
+        logger.info("Final blocked events list: {0}", blockedEvents);
         return blockedEvents;
     }
 
@@ -984,16 +1025,52 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         try {
             if (syncSnapshot != null) {
                 Set<SyncStatement> statements = syncSnapshot.getStatements();
+                logger.info("Found {0} sync statements to analyze for wait events", statements.size());
                 for (SyncStatement statement : statements) {
                     try {
                         Object waitForObj = getFieldValue(statement, "waitFor");
+                        logger.info("WaitFor object from statement: {0}", waitForObj);
+                        
+                        // Handle different types of waitFor objects
                         if (waitForObj instanceof Collection) {
-                            for (Object event : (Collection<?>) waitForObj) {
+                            Collection<?> waitForCollection = (Collection<?>) waitForObj;
+                            logger.info("Found {0} wait events in collection", waitForCollection.size());
+                            for (Object event : waitForCollection) {
                                 String eventName = getEventName(event);
+                                logger.info("Extracted wait event name: {0}", eventName);
                                 if (eventName != null && !waitEvents.contains(eventName)) {
                                     waitEvents.add(eventName);
                                 }
                             }
+                        } else if (waitForObj instanceof BEvent) {
+                            // Single BEvent object
+                            String eventName = getEventName(waitForObj);
+                            logger.info("Extracted single wait event name: {0}", eventName);
+                            if (eventName != null && !waitEvents.contains(eventName)) {
+                                waitEvents.add(eventName);
+                            }
+                        } else if (waitForObj != null && !waitForObj.toString().equals("{none}")) {
+                            // Handle AnyOf or other complex objects by extracting event names from toString()
+                            String waitForStr = waitForObj.toString();
+                            logger.info("Processing complex waitFor object: {0}", waitForStr);
+                            
+                            // Extract event names from AnyOf objects like "anyOf([BEvent name:philosophize],[JsEventSet: CTX.ContextChanged])"
+                            if (waitForStr.contains("BEvent name:")) {
+                                String[] parts = waitForStr.split("BEvent name:");
+                                for (int i = 1; i < parts.length; i++) {
+                                    String eventPart = parts[i];
+                                    int endIndex = eventPart.indexOf(']');
+                                    if (endIndex > 0) {
+                                        String eventName = eventPart.substring(0, endIndex);
+                                        logger.info("Extracted wait event name from complex object: {0}", eventName);
+                                        if (!waitEvents.contains(eventName)) {
+                                            waitEvents.add(eventName);
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            logger.info("WaitFor object is null or {none}, type: {0}", waitForObj != null ? waitForObj.getClass().getSimpleName() : "null");
                         }
                     } catch (Exception e) {
                         logger.warning("Failed to extract wait events from statement: {0}", e.getMessage());
@@ -1003,6 +1080,7 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         } catch (Exception e) {
             logger.warning("Failed to generate lightweight wait events: {0}", e.getMessage());
         }
+        logger.info("Final wait events list: {0}", waitEvents);
         return waitEvents;
     }
 

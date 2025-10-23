@@ -322,6 +322,31 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         bpExecutorService.execute(this::runNextSync);
         return createSuccessResponse();
     }
+    
+    public StepResponse nextSyncWithStepResponse() {
+        BooleanResponse validation = bPjsProgramValidator.validateNextSync(this);
+        if (!validation.isSuccess()) {
+            return new StepResponse(false, validation.getErrorCode().toString(), null);
+        }
+
+        if (!syncSnapshot.isStateValid()) {
+            onInvalidStateError("COBP next sync fatal error");
+            return new StepResponse(false, ErrorCode.INVALID_SYNC_SNAPSHOT_STATE.toString(), null);
+        }
+
+        bpExecutorService.execute(this::runNextSync);
+        
+        // Try to get the real debugger state after nextSync
+        try {
+            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+                syncSnapshot, state, null, null);
+            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            return new StepResponse(true, null, safeState);
+        } catch (Exception e) {
+            logger.error("nextSyncWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
+            return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
+        }
+    }
 
     private void runNextSync() {
         logger.info("COBP runNextSync state: {0}", state.getDebuggerState());
@@ -483,11 +508,51 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         return bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
                 createAddCommandCallback(new StepInto()));
     }
+    
+    public StepResponse stepIntoWithStepResponse() {
+        BooleanResponse validation = bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
+                createAddCommandCallback(new StepInto()));
+        
+        if (!validation.isSuccess()) {
+            return new StepResponse(false, validation.getErrorCode().toString(), null);
+        }
+        
+        // Try to get the real debugger state
+        try {
+            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+                syncSnapshot, state, null, null);
+            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            return new StepResponse(true, null, safeState);
+        } catch (Exception e) {
+            logger.error("stepIntoWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
+            return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
+        }
+    }
 
     @Override
     public BooleanResponse stepOver() {
         return bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
                 createAddCommandCallback(new StepOver()));
+    }
+    
+    public StepResponse stepOverWithStepResponse() {
+        BooleanResponse validation = bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
+                createAddCommandCallback(new StepOver()));
+        
+        if (!validation.isSuccess()) {
+            return new StepResponse(false, validation.getErrorCode().toString(), null);
+        }
+        
+        // Try to get the real debugger state
+        try {
+            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+                syncSnapshot, state, null, null);
+            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            return new StepResponse(true, null, safeState);
+        } catch (Exception e) {
+            logger.error("stepOverWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
+            return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
+        }
     }
 
     @Override
@@ -495,28 +560,55 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         return bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
                 createAddCommandCallback(new StepOut()));
     }
-
-    // New methods that return StepResponse with debugger state
-    public StepResponse stepIntoWithState() {
-        // For COBP, we need to validate SYNC_STATE or STOPPED state
-        // STOPPED state is acceptable if the program failed to start but we still want to show state
-        if (!checkStateEquals(RunnerState.State.SYNC_STATE) && !checkStateEquals(RunnerState.State.STOPPED)) {
-            return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
+    
+    public StepResponse stepOutWithStepResponse() {
+        BooleanResponse validation = bPjsProgramValidator.validateAndRun(this, RunnerState.State.JS_DEBUG,
+                createAddCommandCallback(new StepOut()));
+        
+        if (!validation.isSuccess()) {
+            return new StepResponse(false, validation.getErrorCode().toString(), null);
         }
         
-        // Generate actual debugger state from current sync snapshot
-        // Use try-catch to handle serialization issues gracefully
+        // Try to get the real debugger state
         try {
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
-            // Create a serialization-safe copy to avoid cyclic references
             BPDebuggerState safeState = createSerializationSafeState(debuggerState);
             return new StepResponse(true, null, safeState);
         } catch (Exception e) {
-            logger.error("Failed to generate debugger state: {0}", e.getMessage());
-            // Return a minimal debugger state to avoid serialization issues
-            BPDebuggerState minimalState = createMinimalDebuggerState();
-            return new StepResponse(true, null, minimalState);
+            logger.error("stepOutWithStepResponse - Failed to generate debugger state: {0}", e.getMessage());
+            return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
+        }
+    }
+
+    // New methods that return StepResponse with debugger state
+    public StepResponse stepIntoWithState() {
+        // Debug logging
+        logger.info("stepIntoWithState called - Current state: {0}", state.getDebuggerState());
+        
+        // For COBP, we need to validate SYNC_STATE or STOPPED state
+        // STOPPED state is acceptable if the program failed to start but we still want to show state
+        if (!checkStateEquals(RunnerState.State.SYNC_STATE) && !checkStateEquals(RunnerState.State.STOPPED)) {
+            logger.info("stepIntoWithState - State validation failed. Current: {0}, Expected: SYNC_STATE or STOPPED", state.getDebuggerState());
+            return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
+        }
+        
+        // Try to get the real debugger state first, with fallback to minimal state
+        try {
+            logger.info("stepIntoWithState - Attempting to generate real debugger state");
+            BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
+                syncSnapshot, state, null, null);
+            
+            // Try to create a serialization-safe copy
+            BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            logger.info("stepIntoWithState - Successfully generated real debugger state with {0} b-threads", 
+                safeState.getbThreadInfoList() != null ? safeState.getbThreadInfoList().size() : 0);
+            return new StepResponse(true, null, safeState);
+            
+        } catch (Exception e) {
+            logger.error("stepIntoWithState - Failed to generate real debugger state: {0}", e.getMessage());
+            // Return error response instead of fake minimal state
+            return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
         }
     }
 
@@ -527,19 +619,22 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
         }
         
-        // Generate actual debugger state from current sync snapshot
-        // Use try-catch to handle serialization issues gracefully
+        // Try to get the real debugger state first, with fallback to minimal state
         try {
+            logger.info("stepOverWithState - Attempting to generate real debugger state");
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
-            // Create a serialization-safe copy to avoid cyclic references
+            
+            // Try to create a serialization-safe copy
             BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            logger.info("stepOverWithState - Successfully generated real debugger state with {0} b-threads", 
+                safeState.getbThreadInfoList() != null ? safeState.getbThreadInfoList().size() : 0);
             return new StepResponse(true, null, safeState);
+            
         } catch (Exception e) {
-            logger.error("Failed to generate debugger state: {0}", e.getMessage());
-            // Return a minimal debugger state to avoid serialization issues
-            BPDebuggerState minimalState = createMinimalDebuggerState();
-            return new StepResponse(true, null, minimalState);
+            logger.error("stepOverWithState - Failed to generate real debugger state: {0}", e.getMessage());
+            // Return error response instead of fake minimal state
+            return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
         }
     }
 
@@ -550,19 +645,22 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
         }
         
-        // Generate actual debugger state from current sync snapshot
-        // Use try-catch to handle serialization issues gracefully
+        // Try to get the real debugger state first, with fallback to minimal state
         try {
+            logger.info("stepOutWithState - Attempting to generate real debugger state");
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
-            // Create a serialization-safe copy to avoid cyclic references
+            
+            // Try to create a serialization-safe copy
             BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            logger.info("stepOutWithState - Successfully generated real debugger state with {0} b-threads", 
+                safeState.getbThreadInfoList() != null ? safeState.getbThreadInfoList().size() : 0);
             return new StepResponse(true, null, safeState);
+            
         } catch (Exception e) {
-            logger.error("Failed to generate debugger state: {0}", e.getMessage());
-            // Return a minimal debugger state to avoid serialization issues
-            BPDebuggerState minimalState = createMinimalDebuggerState();
-            return new StepResponse(true, null, minimalState);
+            logger.error("stepOutWithState - Failed to generate real debugger state: {0}", e.getMessage());
+            // Return error response instead of fake minimal state
+            return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
         }
     }
 
@@ -573,25 +671,28 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             return new StepResponse(false, ErrorCode.NOT_IN_BP_SYNC_STATE.toString(), null);
         }
         
-        // Generate actual debugger state from current sync snapshot
-        // Use try-catch to handle serialization issues gracefully
+        // Try to get the real debugger state first, with fallback to minimal state
         try {
+            logger.info("nextSyncWithState - Attempting to generate real debugger state");
             BPDebuggerState debuggerState = debuggerStateHelper.generateDebuggerState(
                 syncSnapshot, state, null, null);
-            // Create a serialization-safe copy to avoid cyclic references
+            
+            // Try to create a serialization-safe copy
             BPDebuggerState safeState = createSerializationSafeState(debuggerState);
+            logger.info("nextSyncWithState - Successfully generated real debugger state with {0} b-threads", 
+                safeState.getbThreadInfoList() != null ? safeState.getbThreadInfoList().size() : 0);
             return new StepResponse(true, null, safeState);
+            
         } catch (Exception e) {
-            logger.error("Failed to generate debugger state: {0}", e.getMessage());
-            // Return a minimal debugger state to avoid serialization issues
-            BPDebuggerState minimalState = createMinimalDebuggerState();
-            return new StepResponse(true, null, minimalState);
+            logger.error("nextSyncWithState - Failed to generate real debugger state: {0}", e.getMessage());
+            // Return error response instead of fake minimal state
+            return new StepResponse(false, "SERIALIZATION_ERROR: " + e.getMessage(), null);
         }
     }
 
     private BPDebuggerState createSerializationSafeState(BPDebuggerState originalState) {
         if (originalState == null) {
-            return createMinimalDebuggerState();
+            return new BPDebuggerState();
         }
         
         // Create a new state object to avoid cyclic references
@@ -673,44 +774,6 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         return safeState;
     }
 
-    private BPDebuggerState createMinimalDebuggerState() {
-        // Create a minimal debugger state with basic information
-        BPDebuggerState state = new BPDebuggerState();
-        
-        // Add some basic b-thread information
-        List<BThreadInfo> bThreads = new ArrayList<>();
-        
-        // Create EventInfo objects for the events
-        Set<EventInfo> requestedEvents = new HashSet<>();
-        requestedEvents.add(new EventInfo("think"));
-        requestedEvents.add(new EventInfo("eat"));
-        
-        Set<EventInfo> blockedEvents = new HashSet<>();
-        Set<EventInfo> waitEvents = new HashSet<>();
-        
-        // Create environment map with scope information
-        Map<Integer, BThreadScope> env = new HashMap<>();
-        BThreadScope scope = new BThreadScope();
-        scope.setScopeName("thinking");
-        scope.setCurrentLineNumber("15");
-        
-        // Add context information to variables so it shows up in JSON
-        Map<String, String> variables = new HashMap<>();
-        variables.put("status", "running");
-        variables.put("context", "simple"); // This is the COBP context field
-        scope.setVariables(variables);
-        env.put(0, scope);
-        
-        // Create a simple b-thread info for demonstration
-        BThreadInfo bThreadInfo = new BThreadInfo("thinking", env, waitEvents, blockedEvents, requestedEvents);
-        bThreads.add(bThreadInfo);
-        
-        state.setbThreadInfoList(bThreads);
-        state.setCurrentRunningBT("thinking");
-        state.setCurrentLineNumber(15);
-        
-        return state;
-    }
 
 
     @Override

@@ -64,7 +64,7 @@ public class BThreadScope  implements Serializable {
 
         List<String> variablesS = new LinkedList<>();
 
-        for (Map.Entry e : variables.entrySet()) {
+        for (Map.Entry<String, String> e : variables.entrySet()) {
             variablesS.add(e.getKey() + ":" + e.getValue());
         }
         return "BThreadScope{" +

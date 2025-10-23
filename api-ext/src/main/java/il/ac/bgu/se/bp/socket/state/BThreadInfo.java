@@ -85,7 +85,7 @@ public class BThreadInfo implements Serializable {
 
         List<String> envS = new LinkedList<>();
 
-        for (Map.Entry e : env.entrySet()) {
+        for (Map.Entry<Integer, BThreadScope> e : env.entrySet()) {
             envS.add(e.getKey() + ":" + e.getValue().toString());
         }
 

@@ -1931,20 +1931,6 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
                                     logger.info("Found substring match (query contains CBT): CBT '{0}' -> Query '{1}'", cbtName, queryName);
                                     return queryName;
                                 }
-                                
-                                // Strategy 4: Special case for philosopher patterns
-                                if (cbtName.contains("ancient") && queryName.contains("ancient")) {
-                                    logger.info("Found ancient philosopher match: CBT '{0}' -> Query '{1}'", cbtName, queryName);
-                                    return queryName;
-                                }
-                                if (cbtName.contains("modern") && queryName.contains("modern")) {
-                                    logger.info("Found modern philosopher match: CBT '{0}' -> Query '{1}'", cbtName, queryName);
-                                    return queryName;
-                                }
-                                if (cbtName.contains("philosopher") && queryName.contains("all")) {
-                                    logger.info("Found general philosopher match: CBT '{0}' -> Query '{1}'", cbtName, queryName);
-                                    return queryName;
-                                }
                             }
                         }
                     }

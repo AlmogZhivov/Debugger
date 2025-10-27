@@ -26,6 +26,9 @@ public class StepStateDTO {
     private List<String> contextEntities;
     private String currentContext;
     private Map<String, String> contextVariables;
+    
+    // Detailed B-Thread Information
+    private List<BThreadInfoDTO> bThreadInfoList;
 
     public StepStateDTO() {
     }
@@ -159,6 +162,15 @@ public class StepStateDTO {
         this.contextVariables = contextVariables;
     }
 
+    // B-Thread Info getters and setters
+    public List<BThreadInfoDTO> getbThreadInfoList() {
+        return bThreadInfoList;
+    }
+
+    public void setbThreadInfoList(List<BThreadInfoDTO> bThreadInfoList) {
+        this.bThreadInfoList = bThreadInfoList;
+    }
+
     @Override
     public String toString() {
         return "StepStateDTO{" +
@@ -178,6 +190,7 @@ public class StepStateDTO {
                 ", contextEntities=" + contextEntities +
                 ", currentContext='" + currentContext + '\'' +
                 ", contextVariables=" + contextVariables +
+                ", bThreadInfoList=" + bThreadInfoList +
                 '}';
     }
 }

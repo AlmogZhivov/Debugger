@@ -736,6 +736,12 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             Map<String, String> contextVariables = generateLightweightContextVariables();
             dto.setContextVariables(contextVariables);
             
+            // Generate detailed b-thread information with query bindings
+            if (debuggerLevel.getLevel() > il.ac.bgu.se.bp.debugger.DebuggerLevel.LIGHT.getLevel()) {
+                List<il.ac.bgu.se.bp.rest.response.BThreadInfoDTO> bThreadInfoList = generateBThreadInfosDTO();
+                dto.setbThreadInfoList(bThreadInfoList);
+            }
+            
             // Generate lightweight b-thread information (only strings)
             if (debuggerLevel.getLevel() > il.ac.bgu.se.bp.debugger.DebuggerLevel.LIGHT.getLevel()) {
                 List<String> activeBThreads = generateLightweightActiveBThreads();
@@ -1751,7 +1757,36 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             // Check if this is a COBP CBT (Context-Based Thread)
             if (bThreadSnapshot.getName().startsWith("cbt: ")) {
                 variables.put("context", "COBP_CBT");
-                variables.put("cbtName", bThreadSnapshot.getName().substring(5)); // Remove "cbt: " prefix
+                String cbtName = bThreadSnapshot.getName().substring(5); // Remove "cbt: " prefix
+                variables.put("cbtName", cbtName);
+                
+                // Find the bound query for this CBT
+                String boundQuery = findBoundQueryForCBT(cbtName);
+                if (boundQuery != null) {
+                    variables.put("managerQuery", boundQuery);
+                    variables.put("queryDescription", "Bound to query: " + boundQuery);
+                } else {
+                    variables.put("managerQuery", "unknown");
+                    variables.put("queryDescription", "No query binding found");
+                }
+            } else if (bThreadSnapshot.getName().startsWith("Live copy: ")) {
+                variables.put("context", "COBP_LIVE_COPY");
+                String liveCopyName = bThreadSnapshot.getName();
+                variables.put("liveCopyName", liveCopyName);
+                
+                // Extract the CBT name from Live copy: CBT_NAME ENTITY_ID
+                String[] parts = liveCopyName.split(": ");
+                if (parts.length >= 2) {
+                    String[] nameParts = parts[1].split(" ");
+                    if (nameParts.length >= 1) {
+                        String cbtName = nameParts[0];
+                        String boundQuery = findBoundQueryForCBT(cbtName);
+                        if (boundQuery != null) {
+                            variables.put("managerQuery", boundQuery);
+                            variables.put("queryDescription", "Live copy of " + cbtName + " bound to query: " + boundQuery);
+                        }
+                    }
+                }
             } else {
                 variables.put("context", "regular");
             }
@@ -1822,6 +1857,107 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
             logger.warning("Failed to create BThreadInfoDTO: {0}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Find the bound query for a CBT by analyzing the ContextProxy queries map
+     */
+    private String findBoundQueryForCBT(String cbtName) {
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBThreadSnapshots() != null) {
+                logger.info("Looking for query binding for CBT: '{0}'", cbtName);
+                
+                // First, try to find Live Copy threads with query data
+                for (il.ac.bgu.cs.bp.bpjs.model.BThreadSyncSnapshot bThreadSnapshot : syncSnapshot.getBThreadSnapshots()) {
+                    String bThreadName = bThreadSnapshot.getName();
+                    
+                    // Check if this is a Live Copy thread for our CBT
+                    if (bThreadName.startsWith("Live copy: " + cbtName)) {
+                        logger.info("Found Live Copy thread for CBT '{0}': {1}", cbtName, bThreadName);
+                        
+                        // Get the data from the b-thread snapshot
+                        Object data = bThreadSnapshot.getData();
+                        if (data != null) {
+                            logger.info("Live Copy data for CBT '{0}': {1}", cbtName, convertToSafeString(data));
+                            
+                            // Try to extract the query field from the data
+                            if (data instanceof org.mozilla.javascript.NativeObject) {
+                                org.mozilla.javascript.NativeObject dataObj = (org.mozilla.javascript.NativeObject) data;
+                                Object queryField = dataObj.get("query");
+                                if (queryField != null) {
+                                    String queryName = convertToSafeString(queryField);
+                                    logger.info("Found query binding in Live Copy data: CBT '{0}' -> Query '{1}'", cbtName, queryName);
+                                    return queryName;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // If no Live Copy threads found, try to get registered queries from ContextProxy and match by pattern
+                try {
+                    Object ctxProxyObj = syncSnapshot.getBProgram().getFromGlobalScope("ctx_proxy", Object.class).get();
+                    if (ctxProxyObj != null && ctxProxyObj.getClass().getName().contains("ContextProxy")) {
+                        logger.info("Attempting to match CBT '{0}' with registered queries", cbtName);
+                        
+                        // Use reflection to get the queries map
+                        java.lang.reflect.Field queriesField = ctxProxyObj.getClass().getDeclaredField("queries");
+                        queriesField.setAccessible(true);
+                        Object queriesMap = queriesField.get(ctxProxyObj);
+                        
+                        if (queriesMap instanceof java.util.Map) {
+                            java.util.Map<?, ?> queries = (java.util.Map<?, ?>) queriesMap;
+                            logger.info("Found {0} registered queries to match against", queries.size());
+                            
+                            // Try different matching strategies
+                            for (Object queryNameObj : queries.keySet()) {
+                                String queryName = convertToSafeString(queryNameObj);
+                                logger.debug("Checking query '{0}' against CBT '{1}'", queryName, cbtName);
+                                
+                                // Strategy 1: Exact match
+                                if (cbtName.equals(queryName)) {
+                                    logger.info("Found exact match: CBT '{0}' -> Query '{1}'", cbtName, queryName);
+                                    return queryName;
+                                }
+                                
+                                // Strategy 2: CBT name contains query name
+                                if (cbtName.toLowerCase().contains(queryName.toLowerCase())) {
+                                    logger.info("Found substring match (CBT contains query): CBT '{0}' -> Query '{1}'", cbtName, queryName);
+                                    return queryName;
+                                }
+                                
+                                // Strategy 3: Query name contains CBT name
+                                if (queryName.toLowerCase().contains(cbtName.toLowerCase())) {
+                                    logger.info("Found substring match (query contains CBT): CBT '{0}' -> Query '{1}'", cbtName, queryName);
+                                    return queryName;
+                                }
+                                
+                                // Strategy 4: Special case for philosopher patterns
+                                if (cbtName.contains("ancient") && queryName.contains("ancient")) {
+                                    logger.info("Found ancient philosopher match: CBT '{0}' -> Query '{1}'", cbtName, queryName);
+                                    return queryName;
+                                }
+                                if (cbtName.contains("modern") && queryName.contains("modern")) {
+                                    logger.info("Found modern philosopher match: CBT '{0}' -> Query '{1}'", cbtName, queryName);
+                                    return queryName;
+                                }
+                                if (cbtName.contains("philosopher") && queryName.contains("all")) {
+                                    logger.info("Found general philosopher match: CBT '{0}' -> Query '{1}'", cbtName, queryName);
+                                    return queryName;
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.debug("Failed to access ContextProxy queries for pattern matching: {0}", e.getMessage());
+                }
+                
+                logger.info("No query binding found for CBT '{0}'", cbtName);
+            }
+        } catch (Exception e) {
+            logger.debug("Failed to find bound query for CBT '{0}': {1}", cbtName, e.getMessage());
+        }
+        return null;
     }
 
     /**

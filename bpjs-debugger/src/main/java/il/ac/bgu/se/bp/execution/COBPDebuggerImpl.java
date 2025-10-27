@@ -741,6 +741,13 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
                 List<String> activeBThreads = generateLightweightActiveBThreads();
                 dto.setActiveBThreads(activeBThreads);
                 
+                // Add b-thread to query mapping information
+                List<String> bThreadQueryInfo = generateBThreadQueryInfo();
+                if (!bThreadQueryInfo.isEmpty()) {
+                    // Add query info to context entities for now
+                    contextEntities.addAll(bThreadQueryInfo);
+                }
+                
                 // Generate lightweight event lists (only strings)
                 List<String> requestedEvents = generateLightweightRequestedEvents();
                 dto.setRequestedEvents(requestedEvents);
@@ -1085,24 +1092,143 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
     }
 
     /**
-     * Convert any Java object to a safe string representation
+     * Convert any Java object to a safe string representation for JSON serialization.
+     * Avoids circular references and handles COBP context objects safely with cycle protection.
      */
     private String convertToSafeString(Object obj) {
-        if (obj == null) {
-            return "null";
-        }
-        
-        if (obj instanceof String) {
-            return (String) obj;
-        }
-        
-        if (obj instanceof Number || obj instanceof Boolean) {
+        return convertToSafeString(obj, new HashSet<>());
+    }
+
+    private String convertToSafeString(Object obj, Set<Object> visited) {
+        if (obj == null) return "null";
+        if (obj instanceof String || obj instanceof Number || obj instanceof Boolean)
             return obj.toString();
+
+        // Avoid infinite recursion on cyclic references
+        if (!visited.add(obj)) {
+            return "[CyclicRef:" + obj.getClass().getSimpleName() + "]";
         }
-        
-        // For complex objects, use toString() as fallback
+
         try {
+            // Rhino NativeObject (JS objects)
+            if (obj instanceof org.mozilla.javascript.NativeObject) {
+                org.mozilla.javascript.NativeObject nativeObj = (org.mozilla.javascript.NativeObject) obj;
+                Map<String, Object> map = new LinkedHashMap<>();
+                for (Object key : nativeObj.keySet()) {
+                    map.put(String.valueOf(key), convertToSafeString(nativeObj.get(key), visited));
+                }
+                return map.toString();
+            }
+
+            // Rhino NativeArray (JS arrays)
+            if (obj instanceof org.mozilla.javascript.NativeArray) {
+                org.mozilla.javascript.NativeArray arr = (org.mozilla.javascript.NativeArray) obj;
+                List<Object> list = new ArrayList<>();
+                for (Object value : arr) {
+                    list.add(convertToSafeString(value, visited));
+                }
+                return list.toString();
+            }
+
+            // Rhino InterpretedFunction (JS functions)
+            if (obj.getClass().getName().contains("InterpretedFunction")) {
+                return "InterpretedFunction@" + Integer.toHexString(System.identityHashCode(obj));
+            }
+
+            // Rhino NativeFunction (JS functions)
+            if (obj.getClass().getName().contains("NativeFunction")) {
+                return "NativeFunction@" + Integer.toHexString(System.identityHashCode(obj));
+            }
+
+            // BPjs BEvent objects
+            if (obj.getClass().getName().contains("BEvent")) {
+                try {
+                    java.lang.reflect.Method getNameMethod = obj.getClass().getMethod("getName");
+                    Object name = getNameMethod.invoke(obj);
+                    return "BEvent[" + name + "]";
+                } catch (Exception e) {
+                    return "BEvent@" + Integer.toHexString(System.identityHashCode(obj));
+                }
+            }
+
+            // BPjs JsEventSet objects
+            if (obj.getClass().getName().contains("JsEventSet")) {
+                try {
+                    java.lang.reflect.Method getNameMethod = obj.getClass().getMethod("getName");
+                    Object name = getNameMethod.invoke(obj);
+                    return "JsEventSet[" + name + "]";
+                } catch (Exception e) {
+                    return "JsEventSet@" + Integer.toHexString(System.identityHashCode(obj));
+                }
+            }
+
+            // BPjs SyncStatement objects
+            if (obj.getClass().getName().contains("SyncStatement")) {
+                return "SyncStatement@" + Integer.toHexString(System.identityHashCode(obj));
+            }
+
+            // BPjs BThread objects
+            if (obj.getClass().getName().contains("BThread")) {
+                try {
+                    java.lang.reflect.Method getNameMethod = obj.getClass().getMethod("getName");
+                    Object name = getNameMethod.invoke(obj);
+                    return "BThread[" + name + "]";
+                } catch (Exception e) {
+                    return "BThread@" + Integer.toHexString(System.identityHashCode(obj));
+                }
+            }
+
+            // COBP ContextProxy
+            if (obj instanceof il.ac.bgu.cs.bp.bpjs.context.ContextProxy) {
+                il.ac.bgu.cs.bp.bpjs.context.ContextProxy ctxProxy =
+                        (il.ac.bgu.cs.bp.bpjs.context.ContextProxy) obj;
+                try {
+                    java.lang.reflect.Method getStoreMethod = ctxProxy.getClass().getMethod("getStore");
+                    Object ctxStore = getStoreMethod.invoke(ctxProxy);
+                    return "ContextProxy" + convertToSafeString(ctxStore, visited);
+                } catch (Exception e) {
+                    return "ContextProxy@" + Integer.toHexString(System.identityHashCode(ctxProxy));
+                }
+            }
+
+            // BPjs proxy objects
+            if (obj.getClass().getName().contains("jsproxy")) {
+                return obj.getClass().getSimpleName() + "@" + Integer.toHexString(System.identityHashCode(obj));
+            }
+
+            // Generic Map
+            if (obj instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) obj;
+                Map<String, Object> result = new LinkedHashMap<>();
+                for (Map.Entry<?, ?> e : map.entrySet()) {
+                    result.put(String.valueOf(e.getKey()), convertToSafeString(e.getValue(), visited));
+                }
+                return result.toString();
+            }
+
+            // Collections
+            if (obj instanceof Collection) {
+                Collection<?> c = (Collection<?>) obj;
+                List<String> items = new ArrayList<>();
+                for (Object v : c) {
+                    items.add(convertToSafeString(v, visited));
+                }
+                return items.toString();
+            }
+
+            // Arrays
+            if (obj.getClass().isArray()) {
+                int len = java.lang.reflect.Array.getLength(obj);
+                List<String> items = new ArrayList<>();
+                for (int i = 0; i < len; i++) {
+                    items.add(convertToSafeString(java.lang.reflect.Array.get(obj, i), visited));
+                }
+                return items.toString();
+            }
+
+            // Fallback
             return obj.toString();
+
         } catch (Exception e) {
             return "[" + obj.getClass().getSimpleName() + "]";
         }
@@ -1115,58 +1241,75 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         Map<String, String> contextStore = new HashMap<>();
         try {
             if (syncSnapshot != null && syncSnapshot.getBProgram() != null) {
-                // Get bp.store from global scope using multiple approaches
-                Object bpObj = syncSnapshot.getBProgram().getFromGlobalScope("bp", Object.class).get();
-                if (bpObj != null) {
-                    // Try multiple field names for the store
-                    String[] storeFieldNames = {"store", "contextStore", "data", "context"};
-                    for (String fieldName : storeFieldNames) {
-                        try {
-                            Object storeObj = getFieldValue(bpObj, fieldName);
-                            if (storeObj instanceof Map) {
-                                Map<?, ?> store = (Map<?, ?>) storeObj;
-                                for (Map.Entry<?, ?> entry : store.entrySet()) {
-                                    String key = convertToSafeString(entry.getKey());
-                                    String value = convertToSafeString(entry.getValue());
-                                    contextStore.put(key, value);
-                                }
-                                if (!contextStore.isEmpty()) {
-                                    logger.info("Found context store with {0} entries using field: {1}", contextStore.size(), fieldName);
-                                    break;
-                                }
-                            }
-                        } catch (Exception e) {
-                            // Continue to next field name
-                        }
+                // Attempt to get the actual map used for bp.store
+                // In many BPjs versions, the BProgram is expected to have a 'store' field
+                Object bpStore = getFieldValue(syncSnapshot.getBProgram(), "store");
+                
+                if (bpStore instanceof Map) {
+                    Map<?, ?> store = (Map<?, ?>) bpStore;
+                    for (Map.Entry<?, ?> entry : store.entrySet()) {
+                        String key = convertToSafeString(entry.getKey());
+                        String value = convertToSafeString(entry.getValue());
+                        contextStore.put(key, value);
                     }
+                    logger.info("Found context store with {0} entries using reflection on BProgram.store", contextStore.size());
+                } else {
+                    logger.warning("BProgram 'store' field not accessible or not a Map. Falling back to global scope attempts.");
                     
-                    // If no store found, try to get all fields from bp object
-                    if (contextStore.isEmpty()) {
-                        try {
-                            java.lang.reflect.Field[] fields = bpObj.getClass().getDeclaredFields();
-                            for (java.lang.reflect.Field field : fields) {
-                                field.setAccessible(true);
-                                Object value = field.get(bpObj);
-                                String fieldName = field.getName();
-                                if (value instanceof Map) {
-                                    Map<?, ?> map = (Map<?, ?>) value;
-                                    for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    // Fallback: Try to get bp.store from global scope using multiple approaches
+                    Object bpObj = syncSnapshot.getBProgram().getFromGlobalScope("bp", Object.class).get();
+                    if (bpObj != null) {
+                        // Try multiple field names for the store
+                        String[] storeFieldNames = {"store", "contextStore", "data", "context"};
+                        for (String fieldName : storeFieldNames) {
+                            try {
+                                Object storeObj = getFieldValue(bpObj, fieldName);
+                                if (storeObj instanceof Map) {
+                                    Map<?, ?> store = (Map<?, ?>) storeObj;
+                                    for (Map.Entry<?, ?> entry : store.entrySet()) {
                                         String key = convertToSafeString(entry.getKey());
-                                        String val = convertToSafeString(entry.getValue());
-                                        contextStore.put(fieldName + "." + key, val);
+                                        String value = convertToSafeString(entry.getValue());
+                                        contextStore.put(key, value);
                                     }
-                                } else {
-                                    contextStore.put(fieldName, convertToSafeString(value));
+                                    if (!contextStore.isEmpty()) {
+                                        logger.info("Found context store with {0} entries using bp field: {1}", contextStore.size(), fieldName);
+                                        break;
+                                    }
                                 }
+                            } catch (Exception e) {
+                                // Continue to next field name
                             }
-                        } catch (Exception e) {
-                            logger.warning("Failed to extract all fields from bp object: {0}", e.getMessage());
+                        }
+                        
+                        // If no store found, try to get all fields from bp object
+                        if (contextStore.isEmpty()) {
+                            try {
+                                java.lang.reflect.Field[] fields = bpObj.getClass().getDeclaredFields();
+                                for (java.lang.reflect.Field field : fields) {
+                                    field.setAccessible(true);
+                                    Object value = field.get(bpObj);
+                                    String fieldName = field.getName();
+                                    if (value instanceof Map) {
+                                        Map<?, ?> map = (Map<?, ?>) value;
+                                        for (Map.Entry<?, ?> entry : map.entrySet()) {
+                                            String key = convertToSafeString(entry.getKey());
+                                            String val = convertToSafeString(entry.getValue());
+                                            contextStore.put(fieldName + "." + key, val);
+                                        }
+                                    } else {
+                                        String valueStr = convertToSafeString(value);
+                                        contextStore.put(fieldName, valueStr);
+                                    }
+                                }
+                            } catch (Exception e) {
+                                logger.debug("Failed to get fields from bp object: {0}", e.getMessage());
+                            }
                         }
                     }
                 }
             }
         } catch (Exception e) {
-            logger.warning("Failed to generate lightweight context store: {0}", e.getMessage());
+            logger.warning("Failed to access BProgram.store directly: {0}", e.getMessage());
         }
         return contextStore;
     }
@@ -1178,34 +1321,180 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         List<String> contextEntities = new ArrayList<>();
         try {
             if (syncSnapshot != null && syncSnapshot.getBProgram() != null) {
-                // Get bp.entities from global scope
-                Object bpObj = syncSnapshot.getBProgram().getFromGlobalScope("bp", Object.class).get();
-                if (bpObj != null) {
-                    // Try multiple field names for entities
-                    String[] entityFieldNames = {"entities", "entityList", "allEntities", "contextEntities"};
+                // 1. Get the ContextProxy instance (a Java object) from the global scope
+                Object ctxProxyObj = syncSnapshot.getBProgram().getFromGlobalScope("ctx_proxy", Object.class).get();
+                
+                if (ctxProxyObj != null) {
+                    logger.info("Found ContextProxy object: {0}", ctxProxyObj.getClass().getName());
+                    
+                    // 1. Extract query names from ContextProxy.queries map
+                    try {
+                        Object queriesObj = getFieldValue(ctxProxyObj, "queries");
+                        if (queriesObj instanceof Map) {
+                            Map<?, ?> queriesMap = (Map<?, ?>) queriesObj;
+                            logger.info("Found {0} registered queries in ContextProxy", queriesMap.size());
+                            
+                            for (Map.Entry<?, ?> entry : queriesMap.entrySet()) {
+                                String queryName = convertToSafeString(entry.getKey());
+                                String queryInfo = "Query[" + queryName + "]";
+                                contextEntities.add(queryInfo);
+                                logger.debug("Registered query: {0}", queryName);
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.debug("Failed to access ContextProxy.queries: {0}", e.getMessage());
+                    }
+                    
+                    // 2. Extract effect functions from ContextProxy.effectFunctions map
+                    try {
+                        Object effectsObj = getFieldValue(ctxProxyObj, "effectFunctions");
+                        if (effectsObj instanceof Map) {
+                            Map<?, ?> effectsMap = (Map<?, ?>) effectsObj;
+                            logger.info("Found {0} registered effect functions in ContextProxy", effectsMap.size());
+                            
+                            for (Map.Entry<?, ?> entry : effectsMap.entrySet()) {
+                                String effectKey = convertToSafeString(entry.getKey());
+                                // Extract event name from "CTX.Effect: eventName" format
+                                if (effectKey.startsWith("CTX.Effect: ")) {
+                                    String eventName = effectKey.substring("CTX.Effect: ".length());
+                                    String effectInfo = "Effect[" + eventName + "]";
+                                    contextEntities.add(effectInfo);
+                                    logger.debug("Registered effect for event: {0}", eventName);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.debug("Failed to access ContextProxy.effectFunctions: {0}", e.getMessage());
+                    }
+                    
+                    // 3. Try to get actual entities from ContextProxy using reflection
+                    String[] entityFieldNames = {"entities", "entityList", "allEntities", "contextEntities", "store"};
                     for (String fieldName : entityFieldNames) {
                         try {
-                            Object entitiesObj = getFieldValue(bpObj, fieldName);
-                            if (entitiesObj instanceof Collection) {
-                                for (Object entity : (Collection<?>) entitiesObj) {
-                                    String entityStr = convertToSafeString(entity);
-                                    contextEntities.add(entityStr);
+                            Object entitiesObj = getFieldValue(ctxProxyObj, fieldName);
+                            logger.debug("ContextProxy field '{0}' returned: {1}", fieldName, entitiesObj != null ? entitiesObj.getClass().getName() : "null");
+                            
+                            if (entitiesObj instanceof Map) {
+                                Map<?, ?> map = (Map<?, ?>) entitiesObj;
+                                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                                    String key = convertToSafeString(entry.getKey());
+                                    if (key.contains("Entity") || key.contains("entity")) {
+                                        String entityInfo = "Entity[" + key + "]";
+                                        contextEntities.add(entityInfo);
+                                    }
                                 }
-                                if (!contextEntities.isEmpty()) {
-                                    logger.info("Found {0} context entities using field: {1}", contextEntities.size(), fieldName);
-                                    break;
+                            } else if (entitiesObj instanceof Collection) {
+                                Collection<?> c = (Collection<?>) entitiesObj;
+                                for (Object entity : c) {
+                                    if (entity != null && entity.getClass().getName().contains("Entity")) {
+                                        contextEntities.add(convertToSafeString(entity));
+                                    }
                                 }
                             }
                         } catch (Exception e) {
-                            // Continue to next field name
+                            logger.debug("Failed to access ContextProxy field '{0}': {1}", fieldName, e.getMessage());
                         }
+                    }
+                    
+                    // 4. If still no entities found, inspect all fields
+                    if (contextEntities.isEmpty()) {
+                        try {
+                            java.lang.reflect.Field[] fields = ctxProxyObj.getClass().getDeclaredFields();
+                            logger.info("ContextProxy has {0} declared fields", fields.length);
+                            for (java.lang.reflect.Field field : fields) {
+                                field.setAccessible(true);
+                                Object value = field.get(ctxProxyObj);
+                                String fieldName = field.getName();
+                                logger.debug("ContextProxy field '{0}' ({1}): {2}", fieldName, field.getType().getSimpleName(), 
+                                    value != null ? value.getClass().getSimpleName() : "null");
+                                
+                                if (value instanceof Map) {
+                                    Map<?, ?> map = (Map<?, ?>) value;
+                                    for (Map.Entry<?, ?> entry : map.entrySet()) {
+                                        String key = convertToSafeString(entry.getKey());
+                                        if (key.contains("Entity") || key.contains("entity")) {
+                                            contextEntities.add(convertToSafeString(entry.getValue()));
+                                        }
+                                    }
+                                } else if (value instanceof Collection) {
+                                    Collection<?> c = (Collection<?>) value;
+                                    for (Object item : c) {
+                                        if (item != null && item.getClass().getName().contains("Entity")) {
+                                            contextEntities.add(convertToSafeString(item));
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            logger.debug("Failed to inspect ContextProxy fields: {0}", e.getMessage());
+                        }
+                    }
+                } else {
+                    logger.warning("ContextProxy object not found in global scope");
+                }
+                
+                // Fallback: Manually look inside bp.store for keys starting with "CTX.Entity:"
+                if (contextEntities.isEmpty()) {
+                    try {
+                        Object bpStore = getFieldValue(syncSnapshot.getBProgram(), "store");
+                        if (bpStore instanceof Map) {
+                            for (Map.Entry<?, ?> entry : ((Map<?, ?>) bpStore).entrySet()) {
+                                if (entry.getKey() instanceof String && ((String) entry.getKey()).startsWith("CTX.Entity:")) {
+                                    contextEntities.add(convertToSafeString(entry.getValue()));
+                                }
+                            }
+                            if (!contextEntities.isEmpty()) {
+                                logger.info("Found {0} context entities from bp.store CTX.Entity keys", contextEntities.size());
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.debug("Failed to get entities from bp.store fallback: {0}", e.getMessage());
                     }
                 }
             }
         } catch (Exception e) {
-            logger.warning("Failed to generate lightweight context entities: {0}", e.getMessage());
+            logger.debug("Failed to generate lightweight context entities via ContextProxy: {0}", e.getMessage());
         }
         return contextEntities;
+    }
+
+    /**
+     * Generate b-thread to query mapping information
+     */
+    private List<String> generateBThreadQueryInfo() {
+        List<String> bThreadQueryInfo = new ArrayList<>();
+        try {
+            if (syncSnapshot != null && syncSnapshot.getBProgram() != null) {
+                // Get active b-threads and try to extract their query information
+                List<String> activeBThreads = generateLightweightActiveBThreads();
+                
+                for (String bThreadName : activeBThreads) {
+                    // Look for CBT (Context Behavior Thread) patterns
+                    if (bThreadName.startsWith("cbt: ")) {
+                        String queryName = bThreadName.substring("cbt: ".length());
+                        String queryInfo = "BThreadQuery[" + queryName + "]";
+                        bThreadQueryInfo.add(queryInfo);
+                        logger.debug("Found CBT b-thread with query: {0}", queryName);
+                    }
+                    
+                    // Look for Live copy patterns
+                    if (bThreadName.startsWith("Live copy: ")) {
+                        String[] parts = bThreadName.split(": ");
+                        if (parts.length >= 2) {
+                            String queryName = parts[1];
+                            String queryInfo = "LiveCopyQuery[" + queryName + "]";
+                            bThreadQueryInfo.add(queryInfo);
+                            logger.debug("Found Live copy b-thread with query: {0}", queryName);
+                        }
+                    }
+                }
+                
+                logger.info("Generated {0} b-thread query mappings", bThreadQueryInfo.size());
+            }
+        } catch (Exception e) {
+            logger.debug("Failed to generate b-thread query info: {0}", e.getMessage());
+        }
+        return bThreadQueryInfo;
     }
 
     /**
@@ -1273,7 +1562,8 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
                                     }
                                 } catch (Exception e) {
                                     // If reflection fails, just use toString
-                                    contextVariables.put(fieldName, convertToSafeString(ctxObj));
+                                    String ctxStr = convertToSafeString(ctxObj);
+                                    contextVariables.put(fieldName, ctxStr);
                                 }
                             }
                         } catch (Exception e) {

@@ -65,7 +65,7 @@ public class COBPIDEServiceImpl implements COBPIDEService {
             return createErrorResponse(ErrorCode.INVALID_SOURCE_CODE);
         }
 
-        BPJsDebugger<BooleanResponse> cobpProgramDebugger = cobpDebuggerFactory.getBPJsDebugger(userId, filename, DebuggerLevel.LIGHT);
+        BPJsDebugger<BooleanResponse> cobpProgramDebugger = cobpDebuggerFactory.getBPJsDebugger(userId, filename, DebuggerLevel.NORMAL);
         cobpProgramDebugger.subscribe(sessionHandler);
         sessionHandler.addNewRunExecution(userId, cobpProgramDebugger, filename);
         sessionHandler.updateLastOperationTime(userId);

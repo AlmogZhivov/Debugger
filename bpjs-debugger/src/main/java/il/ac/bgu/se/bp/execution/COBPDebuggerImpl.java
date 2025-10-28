@@ -1253,61 +1253,69 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
                 
                 if (bpStore instanceof Map) {
                     Map<?, ?> store = (Map<?, ?>) bpStore;
+                    logger.info("BProgram.store is a Map with {0} entries", store.size());
+                    logger.info("BProgram.store keys: {0}", store.keySet());
+                    
                     for (Map.Entry<?, ?> entry : store.entrySet()) {
                         String key = convertToSafeString(entry.getKey());
                         String value = convertToSafeString(entry.getValue());
                         contextStore.put(key, value);
+                        
+                        // Debug: Check for CTX.Entity keys specifically
+                        if (key.startsWith("CTX.Entity:")) {
+                            logger.info("Found CTX.Entity key: {0} = {1}", key, value);
+                        }
                     }
                     logger.info("Found context store with {0} entries using reflection on BProgram.store", contextStore.size());
                 } else {
                     logger.warning("BProgram 'store' field not accessible or not a Map. Falling back to global scope attempts.");
                     
                     // Fallback: Try to get bp.store from global scope using multiple approaches
-                    Object bpObj = syncSnapshot.getBProgram().getFromGlobalScope("bp", Object.class).get();
-                    if (bpObj != null) {
-                        // Try multiple field names for the store
-                        String[] storeFieldNames = {"store", "contextStore", "data", "context"};
-                        for (String fieldName : storeFieldNames) {
-                            try {
-                                Object storeObj = getFieldValue(bpObj, fieldName);
-                                if (storeObj instanceof Map) {
-                                    Map<?, ?> store = (Map<?, ?>) storeObj;
-                                    for (Map.Entry<?, ?> entry : store.entrySet()) {
-                                        String key = convertToSafeString(entry.getKey());
-                                        String value = convertToSafeString(entry.getValue());
-                                        contextStore.put(key, value);
-                                    }
-                                    if (!contextStore.isEmpty()) {
-                                        logger.info("Found context store with {0} entries using bp field: {1}", contextStore.size(), fieldName);
-                                        break;
-                                    }
+                Object bpObj = syncSnapshot.getBProgram().getFromGlobalScope("bp", Object.class).get();
+                if (bpObj != null) {
+                    // Try multiple field names for the store
+                    String[] storeFieldNames = {"store", "contextStore", "data", "context"};
+                    for (String fieldName : storeFieldNames) {
+                        try {
+                            Object storeObj = getFieldValue(bpObj, fieldName);
+                            if (storeObj instanceof Map) {
+                                Map<?, ?> store = (Map<?, ?>) storeObj;
+                                for (Map.Entry<?, ?> entry : store.entrySet()) {
+                                    String key = convertToSafeString(entry.getKey());
+                                    String value = convertToSafeString(entry.getValue());
+                                    contextStore.put(key, value);
                                 }
-                            } catch (Exception e) {
-                                // Continue to next field name
+                                if (!contextStore.isEmpty()) {
+                                        logger.info("Found context store with {0} entries using bp field: {1}", contextStore.size(), fieldName);
+                                    break;
+                                }
                             }
+                        } catch (Exception e) {
+                            // Continue to next field name
                         }
-                        
-                        // If no store found, try to get all fields from bp object
-                        if (contextStore.isEmpty()) {
-                            try {
-                                java.lang.reflect.Field[] fields = bpObj.getClass().getDeclaredFields();
-                                for (java.lang.reflect.Field field : fields) {
-                                    field.setAccessible(true);
-                                    Object value = field.get(bpObj);
-                                    String fieldName = field.getName();
-                                    if (value instanceof Map) {
-                                        Map<?, ?> map = (Map<?, ?>) value;
-                                        for (Map.Entry<?, ?> entry : map.entrySet()) {
-                                            String key = convertToSafeString(entry.getKey());
-                                            String val = convertToSafeString(entry.getValue());
-                                            contextStore.put(fieldName + "." + key, val);
-                                        }
-                                    } else {
+                    }
+                    
+                    // If no store found, try to get all fields from bp object
+                    if (contextStore.isEmpty()) {
+                        try {
+                            java.lang.reflect.Field[] fields = bpObj.getClass().getDeclaredFields();
+                            for (java.lang.reflect.Field field : fields) {
+                                field.setAccessible(true);
+                                Object value = field.get(bpObj);
+                                String fieldName = field.getName();
+                                if (value instanceof Map) {
+                                    Map<?, ?> map = (Map<?, ?>) value;
+                                    for (Map.Entry<?, ?> entry : map.entrySet()) {
+                                        String key = convertToSafeString(entry.getKey());
+                                        String val = convertToSafeString(entry.getValue());
+                                        contextStore.put(fieldName + "." + key, val);
+                                    }
+                                } else {
                                         String valueStr = convertToSafeString(value);
                                         contextStore.put(fieldName, valueStr);
-                                    }
                                 }
-                            } catch (Exception e) {
+                            }
+                        } catch (Exception e) {
                                 logger.debug("Failed to get fields from bp object: {0}", e.getMessage());
                             }
                         }
@@ -1427,11 +1435,11 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
                                     for (Object item : c) {
                                         if (item != null && item.getClass().getName().contains("Entity")) {
                                             contextEntities.add(convertToSafeString(item));
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (Exception e) {
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
                             logger.debug("Failed to inspect ContextProxy fields: {0}", e.getMessage());
                         }
                     }
@@ -1860,14 +1868,72 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
     }
 
     /**
-     * Find the bound query for a CBT by analyzing the ContextProxy queries map
+     * Find the bound query for a CBT by accessing the CBT b-thread's data directly
      */
     private String findBoundQueryForCBT(String cbtName) {
         try {
             if (syncSnapshot != null && syncSnapshot.getBThreadSnapshots() != null) {
                 logger.info("Looking for query binding for CBT: '{0}'", cbtName);
                 
-                // First, try to find Live Copy threads with query data
+                // Look for the CBT b-thread directly
+                String cbtThreadName = "cbt: " + cbtName;
+                logger.info("Searching for CBT b-thread: '{0}'", cbtThreadName);
+                
+                for (il.ac.bgu.cs.bp.bpjs.model.BThreadSyncSnapshot bThreadSnapshot : syncSnapshot.getBThreadSnapshots()) {
+                    String bThreadName = bThreadSnapshot.getName();
+                    logger.debug("Checking b-thread: '{0}'", bThreadName);
+                    
+                    // Check if this is the CBT thread we're looking for
+                    if (bThreadName.equals(cbtThreadName)) {
+                        logger.info("Found CBT b-thread: '{0}'", bThreadName);
+                        
+                        // Get the data from the b-thread snapshot
+                        Object data = bThreadSnapshot.getData();
+                        logger.info("CBT data object: {0}", data != null ? data.getClass().getName() : "null");
+                        
+                        if (data != null) {
+                            logger.info("CBT data for '{0}': {1}", cbtName, convertToSafeString(data));
+                            
+                            // Try to extract the query field from the data
+                            if (data instanceof org.mozilla.javascript.NativeObject) {
+                                org.mozilla.javascript.NativeObject dataObj = (org.mozilla.javascript.NativeObject) data;
+                                Object queryField = dataObj.get("query");
+                                logger.info("Query field from CBT data: {0}", queryField);
+                                if (queryField != null) {
+                                    String queryName = convertToSafeString(queryField);
+                                    logger.info("Found query binding in CBT data: CBT '{0}' -> Query '{1}'", cbtName, queryName);
+                                    return queryName;
+                                }
+                            } else {
+                                logger.info("CBT data is not a NativeObject, it's: {0}", data.getClass().getName());
+                                
+                                // Try to access the data using reflection
+                                try {
+                                    java.lang.reflect.Field[] fields = data.getClass().getDeclaredFields();
+                                    logger.info("CBT data fields: {0}", java.util.Arrays.stream(fields).map(f -> f.getName()).collect(java.util.stream.Collectors.toList()));
+                                    
+                                    for (java.lang.reflect.Field field : fields) {
+                                        field.setAccessible(true);
+                                        Object value = field.get(data);
+                                        String fieldName = field.getName();
+                                        logger.info("CBT data field '{0}': {1}", fieldName, convertToSafeString(value));
+                                        
+                                        if ("query".equals(fieldName) && value != null) {
+                                            String queryName = convertToSafeString(value);
+                                            logger.info("Found query binding via reflection: CBT '{0}' -> Query '{1}'", cbtName, queryName);
+                                            return queryName;
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    logger.debug("Failed to access CBT data fields: {0}", e.getMessage());
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // If not found in CBT thread, look for Live Copy threads
+                logger.info("CBT thread not found, searching for Live Copy threads...");
                 for (il.ac.bgu.cs.bp.bpjs.model.BThreadSyncSnapshot bThreadSnapshot : syncSnapshot.getBThreadSnapshots()) {
                     String bThreadName = bThreadSnapshot.getName();
                     
@@ -1894,50 +1960,6 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
                     }
                 }
                 
-                // If no Live Copy threads found, try to get registered queries from ContextProxy and match by pattern
-                try {
-                    Object ctxProxyObj = syncSnapshot.getBProgram().getFromGlobalScope("ctx_proxy", Object.class).get();
-                    if (ctxProxyObj != null && ctxProxyObj.getClass().getName().contains("ContextProxy")) {
-                        logger.info("Attempting to match CBT '{0}' with registered queries", cbtName);
-                        
-                        // Use reflection to get the queries map
-                        java.lang.reflect.Field queriesField = ctxProxyObj.getClass().getDeclaredField("queries");
-                        queriesField.setAccessible(true);
-                        Object queriesMap = queriesField.get(ctxProxyObj);
-                        
-                        if (queriesMap instanceof java.util.Map) {
-                            java.util.Map<?, ?> queries = (java.util.Map<?, ?>) queriesMap;
-                            logger.info("Found {0} registered queries to match against", queries.size());
-                            
-                            // Try different matching strategies
-                            for (Object queryNameObj : queries.keySet()) {
-                                String queryName = convertToSafeString(queryNameObj);
-                                logger.debug("Checking query '{0}' against CBT '{1}'", queryName, cbtName);
-                                
-                                // Strategy 1: Exact match
-                                if (cbtName.equals(queryName)) {
-                                    logger.info("Found exact match: CBT '{0}' -> Query '{1}'", cbtName, queryName);
-                                    return queryName;
-                                }
-                                
-                                // Strategy 2: CBT name contains query name
-                                if (cbtName.toLowerCase().contains(queryName.toLowerCase())) {
-                                    logger.info("Found substring match (CBT contains query): CBT '{0}' -> Query '{1}'", cbtName, queryName);
-                                    return queryName;
-                                }
-                                
-                                // Strategy 3: Query name contains CBT name
-                                if (queryName.toLowerCase().contains(cbtName.toLowerCase())) {
-                                    logger.info("Found substring match (query contains CBT): CBT '{0}' -> Query '{1}'", cbtName, queryName);
-                                    return queryName;
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.debug("Failed to access ContextProxy queries for pattern matching: {0}", e.getMessage());
-                }
-                
                 logger.info("No query binding found for CBT '{0}'", cbtName);
             }
         } catch (Exception e) {
@@ -1955,9 +1977,8 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
                 return "null";
             }
             
-            // Use Gson to serialize the value
-            com.google.gson.Gson gson = new com.google.gson.Gson();
-            return gson.toJson(jsValue);
+            // Use convertToSafeString instead of Gson to avoid StackOverflowError
+            return convertToSafeString(jsValue);
             
         } catch (Exception e) {
             logger.warning("Failed to serialize JS value: {0}", e.getMessage());

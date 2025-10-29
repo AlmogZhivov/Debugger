@@ -1868,96 +1868,138 @@ public class COBPDebuggerImpl implements BPJsDebugger<BooleanResponse> {
     }
 
     /**
-     * Find the bound query for a CBT by accessing the CBT b-thread's data directly
+     * Find the bound query for a CBT by inspecting all b-thread snapshots and their data fields
      */
     private String findBoundQueryForCBT(String cbtName) {
         try {
             if (syncSnapshot != null && syncSnapshot.getBThreadSnapshots() != null) {
                 logger.info("Looking for query binding for CBT: '{0}'", cbtName);
                 
-                // Look for the CBT b-thread directly
-                String cbtThreadName = "cbt: " + cbtName;
-                logger.info("Searching for CBT b-thread: '{0}'", cbtThreadName);
+                // First, let's inspect ALL b-thread snapshots to understand their structure
+                logger.info("=== DEBUGGING CBT Binding with Rhino Context ===");
                 
-                for (il.ac.bgu.cs.bp.bpjs.model.BThreadSyncSnapshot bThreadSnapshot : syncSnapshot.getBThreadSnapshots()) {
-                    String bThreadName = bThreadSnapshot.getName();
-                    logger.debug("Checking b-thread: '{0}'", bThreadName);
+                // Get the ctx object from global scope to access runQuery
+                Object ctxObj = syncSnapshot.getBProgram().getFromGlobalScope("ctx", Object.class).get();
+                logger.info("Ctx object: {0}", ctxObj != null ? ctxObj.getClass().getName() : "null");
+                
+                if (ctxObj instanceof org.mozilla.javascript.NativeObject) {
+                    org.mozilla.javascript.NativeObject ctxNativeObj = (org.mozilla.javascript.NativeObject) ctxObj;
+                    Object runQueryFunc = ctxNativeObj.get("runQuery");
+                    logger.info("Found runQuery function: {0}", runQueryFunc != null ? runQueryFunc.getClass().getName() : "null");
                     
-                    // Check if this is the CBT thread we're looking for
-                    if (bThreadName.equals(cbtThreadName)) {
-                        logger.info("Found CBT b-thread: '{0}'", bThreadName);
-                        
-                        // Get the data from the b-thread snapshot
-                        Object data = bThreadSnapshot.getData();
-                        logger.info("CBT data object: {0}", data != null ? data.getClass().getName() : "null");
-                        
-                        if (data != null) {
-                            logger.info("CBT data for '{0}': {1}", cbtName, convertToSafeString(data));
-                            
-                            // Try to extract the query field from the data
-                            if (data instanceof org.mozilla.javascript.NativeObject) {
-                                org.mozilla.javascript.NativeObject dataObj = (org.mozilla.javascript.NativeObject) data;
-                                Object queryField = dataObj.get("query");
-                                logger.info("Query field from CBT data: {0}", queryField);
-                                if (queryField != null) {
-                                    String queryName = convertToSafeString(queryField);
-                                    logger.info("Found query binding in CBT data: CBT '{0}' -> Query '{1}'", cbtName, queryName);
-                                    return queryName;
-                                }
-                            } else {
-                                logger.info("CBT data is not a NativeObject, it's: {0}", data.getClass().getName());
+                    if (runQueryFunc != null) {
+                        // Get ContextProxy to see what queries are registered
+                        Object ctxProxyObj = syncSnapshot.getBProgram().getFromGlobalScope("ctx_proxy", Object.class).get();
+                        if (ctxProxyObj != null) {
+                            Object queriesObj = getFieldValue(ctxProxyObj, "queries");
+                            if (queriesObj instanceof Map) {
+                                Map<?, ?> queriesMap = (Map<?, ?>) queriesObj;
+                                logger.info("Testing {0} queries for CBT '{1}' using runQuery function", queriesMap.size(), cbtName);
                                 
-                                // Try to access the data using reflection
-                                try {
-                                    java.lang.reflect.Field[] fields = data.getClass().getDeclaredFields();
-                                    logger.info("CBT data fields: {0}", java.util.Arrays.stream(fields).map(f -> f.getName()).collect(java.util.stream.Collectors.toList()));
+                                // Test each registered query to see if it returns entities for this CBT
+                                for (Map.Entry<?, ?> entry : queriesMap.entrySet()) {
+                                    String queryName = convertToSafeString(entry.getKey());
+                                    logger.debug("Testing query '{0}' for CBT '{1}'", queryName, cbtName);
                                     
-                                    for (java.lang.reflect.Field field : fields) {
-                                        field.setAccessible(true);
-                                        Object value = field.get(data);
-                                        String fieldName = field.getName();
-                                        logger.info("CBT data field '{0}': {1}", fieldName, convertToSafeString(value));
+                                    try {
+                                        // Call runQuery with the query name
+                                        Object[] args = {queryName};
+                                        Object result = ((org.mozilla.javascript.Function) runQueryFunc).call(
+                                            org.mozilla.javascript.Context.getCurrentContext(),
+                                            ctxNativeObj,
+                                            ctxNativeObj,
+                                            args
+                                        );
+                                        logger.debug("Query '{0}' returned: {1}", queryName, convertToSafeString(result));
                                         
-                                        if ("query".equals(fieldName) && value != null) {
-                                            String queryName = convertToSafeString(value);
-                                            logger.info("Found query binding via reflection: CBT '{0}' -> Query '{1}'", cbtName, queryName);
-                                            return queryName;
+                                        // If the query returns entities, this might be the binding
+                                        if (result instanceof org.mozilla.javascript.NativeArray) {
+                                            org.mozilla.javascript.NativeArray resultArray = (org.mozilla.javascript.NativeArray) result;
+                                            if (resultArray.getLength() > 0) {
+                                                logger.info("Query '{0}' returned {1} entities - potential binding for CBT '{2}'", 
+                                                    queryName, resultArray.getLength(), cbtName);
+                                                return queryName;
+                                            }
                                         }
+                                    } catch (Exception e) {
+                                        logger.debug("Failed to test query '{0}': {1}", queryName, e.getMessage());
                                     }
-                                } catch (Exception e) {
-                                    logger.debug("Failed to access CBT data fields: {0}", e.getMessage());
                                 }
                             }
                         }
                     }
                 }
                 
-                // If not found in CBT thread, look for Live Copy threads
-                logger.info("CBT thread not found, searching for Live Copy threads...");
+                logger.info("=== END CBT Binding Debugging ===");
+                
+                // Now let's inspect all b-thread snapshots to see their data fields
+                logger.info("Inspecting all b-thread snapshots for data fields...");
                 for (il.ac.bgu.cs.bp.bpjs.model.BThreadSyncSnapshot bThreadSnapshot : syncSnapshot.getBThreadSnapshots()) {
                     String bThreadName = bThreadSnapshot.getName();
+                    logger.info("=== BThread: {0} ===", bThreadName);
                     
-                    // Check if this is a Live Copy thread for our CBT
-                    if (bThreadName.startsWith("Live copy: " + cbtName)) {
-                        logger.info("Found Live Copy thread for CBT '{0}': {1}", cbtName, bThreadName);
+                    // Print all available fields in BThreadSyncSnapshot
+                    java.lang.reflect.Field[] snapshotFields = bThreadSnapshot.getClass().getDeclaredFields();
+                    logger.info("BThreadSyncSnapshot fields: {0}", 
+                        java.util.Arrays.stream(snapshotFields).map(f -> f.getName()).collect(java.util.stream.Collectors.toList()));
+                    
+                    // Get the data field
+                    Object data = bThreadSnapshot.getData();
+                    logger.info("Data field: {0}", data != null ? data.getClass().getName() : "null");
+                    
+                    if (data != null) {
+                        logger.info("Data content: {0}", convertToSafeString(data));
                         
-                        // Get the data from the b-thread snapshot
-                        Object data = bThreadSnapshot.getData();
-                        if (data != null) {
-                            logger.info("Live Copy data for CBT '{0}': {1}", cbtName, convertToSafeString(data));
-                            
-                            // Try to extract the query field from the data
-                            if (data instanceof org.mozilla.javascript.NativeObject) {
-                                org.mozilla.javascript.NativeObject dataObj = (org.mozilla.javascript.NativeObject) data;
-                                Object queryField = dataObj.get("query");
-                                if (queryField != null) {
-                                    String queryName = convertToSafeString(queryField);
-                                    logger.info("Found query binding in Live Copy data: CBT '{0}' -> Query '{1}'", cbtName, queryName);
-                                    return queryName;
+                        // If it's a NativeObject, inspect its properties
+                        if (data instanceof org.mozilla.javascript.NativeObject) {
+                            org.mozilla.javascript.NativeObject dataObj = (org.mozilla.javascript.NativeObject) data;
+                            logger.info("Data object properties:");
+                            for (Object key : dataObj.keySet()) {
+                                Object value = dataObj.get(key);
+                                logger.info("  {0}: {1}", key, convertToSafeString(value));
+                                
+                                // Check if this is a query field
+                                if ("query".equals(key) && value != null) {
+                                    String queryName = convertToSafeString(value);
+                                    logger.info("Found query binding in b-thread '{0}': {1}", bThreadName, queryName);
+                                    
+                                    // Check if this b-thread is related to our CBT
+                                    if (bThreadName.contains(cbtName)) {
+                                        logger.info("Query '{0}' found for CBT '{1}' in b-thread '{2}'", queryName, cbtName, bThreadName);
+                                        return queryName;
+                                    }
                                 }
+                            }
+                        } else {
+                            // Try reflection on non-NativeObject data
+                            try {
+                                java.lang.reflect.Field[] dataFields = data.getClass().getDeclaredFields();
+                                logger.info("Data object fields: {0}", 
+                                    java.util.Arrays.stream(dataFields).map(f -> f.getName()).collect(java.util.stream.Collectors.toList()));
+                                
+                                for (java.lang.reflect.Field field : dataFields) {
+                                    field.setAccessible(true);
+                                    Object value = field.get(data);
+                                    String fieldName = field.getName();
+                                    logger.info("Data field '{0}': {1}", fieldName, convertToSafeString(value));
+                                    
+                                    if ("query".equals(fieldName) && value != null) {
+                                        String queryName = convertToSafeString(value);
+                                        logger.info("Found query binding via reflection in b-thread '{0}': {1}", bThreadName, queryName);
+                                        
+                                        // Check if this b-thread is related to our CBT
+                                        if (bThreadName.contains(cbtName)) {
+                                            logger.info("Query '{0}' found for CBT '{1}' in b-thread '{2}'", queryName, cbtName, bThreadName);
+                                            return queryName;
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                logger.debug("Failed to inspect data fields via reflection: {0}", e.getMessage());
                             }
                         }
                     }
+                    logger.info("=== END BThread: {0} ===", bThreadName);
                 }
                 
                 logger.info("No query binding found for CBT '{0}'", cbtName);

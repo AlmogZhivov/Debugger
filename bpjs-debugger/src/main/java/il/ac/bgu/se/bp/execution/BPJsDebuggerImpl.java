@@ -103,7 +103,8 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
         debuggerEngine = new DebuggerEngineImpl(debuggerId, filename, state, debuggerStateHelper, debuggerExecutorId);
         debuggerEngine.changeDebuggerLevel(debuggerLevel);
         debuggerPrintStream.setDebuggerId(debuggerId);
-        bprog = new ResourceBProgram(filename);
+        //bprog = new ResourceBProgram(filename);
+        bprog = new il.ac.bgu.cs.bp.bpjs.context.DebugableContextBProgram(filename);
         initListeners(bprog);
     }
 

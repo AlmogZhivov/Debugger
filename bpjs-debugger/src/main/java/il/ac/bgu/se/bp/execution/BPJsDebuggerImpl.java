@@ -1,7 +1,7 @@
 package il.ac.bgu.se.bp.execution;
 
 import il.ac.bgu.cs.bp.bpjs.BPjs;
-import il.ac.bgu.cs.bp.bpjs.bprogramio.BProgramSyncSnapshotIO;
+import il.ac.bgu.cs.bp.bpjs.bprogramio.BProgramIO;
 import il.ac.bgu.cs.bp.bpjs.execution.listeners.BProgramRunnerListener;
 import il.ac.bgu.cs.bp.bpjs.execution.listeners.PrintBProgramRunnerListener;
 import il.ac.bgu.cs.bp.bpjs.model.*;
@@ -168,7 +168,7 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
     @Override
     public byte[] getSyncSnapshot() {
         try {
-            return new BProgramSyncSnapshotIO(bprog).serialize(syncSnapshot);
+            return new BProgramIO(bprog).serialize(syncSnapshot);
         } catch (Exception e) {
             logger.error("failed serializing bprog SyncSnapshot", e);
             return null;
@@ -192,7 +192,7 @@ public class BPJsDebuggerImpl implements BPJsDebugger<BooleanResponse> {
     @Override
     public BooleanResponse setSyncSnapshot(SyncSnapshot syncSnapshotHolder) {
         try {
-            return setSyncSnapshot(new BProgramSyncSnapshotIO(bprog).deserialize(syncSnapshotHolder.getSyncSnapshot()));
+            return setSyncSnapshot(new BProgramIO(bprog).deserialize(syncSnapshotHolder.getSyncSnapshot()));
         } catch (Exception e) {
             logger.error("deserialization from sync snapshot bytes to object failed", e);
             return createErrorResponse(ErrorCode.IMPORT_SYNC_SNAPSHOT_FAILURE);

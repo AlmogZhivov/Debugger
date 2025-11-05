@@ -32,6 +32,10 @@
             <artifactId>rhino</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.mozilla</groupId>
+            <artifactId>rhino-tools</artifactId>
+        </dependency>
+        <dependency>
             <groupId>il.ac.bgu.se.bp</groupId>
             <artifactId>bp-ide-api-int</artifactId>
             <version>${project.version}</version>

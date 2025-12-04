@@ -12,33 +12,49 @@ import java.util.SortedMap;
 
 public interface BPJsDebugger<T> extends Debugger<T>, Publisher<BPEvent> {
 
-    T setup(Map<Integer, Boolean> breakpoints, boolean isSkipBreakpoints, boolean isSkipSyncPoints, boolean isWaitForExternalEvents);
+    T setup(Map<Integer, Boolean> breakpoints, boolean isSkipBreakpoints, boolean isSkipSyncPoints,
+            boolean isWaitForExternalEvents);
 
     boolean isSetup();
+
     boolean isStarted();
+
     boolean isSkipSyncPoints();
+
     boolean isWaitForExternalEvents();
+
     boolean isMuteBreakPoints();
 
     T addExternalEvent(String externalEvent);
+
     T removeExternalEvent(String externalEvent);
 
     T toggleWaitForExternalEvents(boolean shouldWait);
 
-    DebugResponse startSync(Map<Integer, Boolean> breakpointsMap, boolean isSkipSyncPoints, boolean isSkipBreakpoints, boolean isWaitForExternalEvents);
+    DebugResponse startSync(Map<Integer, Boolean> breakpointsMap, boolean isSkipSyncPoints, boolean isSkipBreakpoints,
+            boolean isWaitForExternalEvents);
 
     T nextSync();
+
     T toggleMuteSyncPoints(boolean toggleMuteSyncPoints);
 
     GetSyncSnapshotsResponse getSyncSnapshotsHistory();
+
     byte[] getSyncSnapshot();
+
     T setSyncSnapshot(long snapShotTime);
+
     T setSyncSnapshot(SyncSnapshot newSnapshot);
 
-    RunnerState getDebuggerState();
-    String getDebuggerId();
-    String getDebuggerExecutorId();
+    T previewSyncSnapshot(long snapShotTime);
 
+    T restoreLatestSnapshot();
+
+    RunnerState getDebuggerState();
+
+    String getDebuggerId();
+
+    String getDebuggerExecutorId();
 
     SortedMap<Long, EventInfo> getEventsHistory(int from, int to);
 }
